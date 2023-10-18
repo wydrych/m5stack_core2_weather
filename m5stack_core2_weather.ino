@@ -1,8 +1,9 @@
 #include <M5Unified.h>
 #include <WiFi.h>
 
-#include "settings.hpp"
+#include "fonts/all.h"
 #include "icons/icons.hpp"
+#include "settings.hpp"
 
 void setup()
 {
@@ -12,6 +13,7 @@ void setup()
   auto cfg = M5.config();
   cfg.serial_baudrate = 115200;
   M5.begin(cfg);
+  M5.Display.setBrightness(63);
   M5.Display.fillScreen(settings::colors::background);
 
   WiFi.begin(settings::wifi::ssid, settings::wifi::password);
@@ -40,7 +42,7 @@ void on_wifi_disconnected()
 void wifi_loop()
 {
   static bool status;
-  bool new_status = WiFi.status() == WL_CONNECTED;
+  bool new_status = WiFi.isConnected();
   if (status == new_status)
     return;
   status = new_status;
