@@ -2,6 +2,7 @@
 
 #include <M5GFX.h>
 #include "fonts/all.h"
+#include "lang.hpp"
 
 #if __has_include("settings-private.hpp")
 #include "settings-private.hpp"
@@ -13,9 +14,21 @@
 #ifndef WIFI_PASSWORD
 #define WIFI_PASSWORD NULL
 #endif
+#ifndef TZ
+#define TZ UTC
+#endif
+#ifndef LANG
+#define LANG Lang::LANG_EN
+#endif
 
 namespace settings
 {
+    const Lang lang = LANG;
+    namespace time
+    {
+        const char *const ntpServer = "pool.ntp.org";
+        const char *const tz = TZ;
+    }
     namespace wifi
     {
         const char *const ssid = WIFI_SSID;

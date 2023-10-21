@@ -1,9 +1,24 @@
 #include <M5Unified.h>
 #include <WiFi.h>
+#include <time.h>
 
 #include "fonts/all.h"
 #include "icons/icons.hpp"
+#include "lang.hpp"
 #include "settings.hpp"
+
+bool wifi_status;
+int displayWidth, displayHeight;
+M5Canvas *displayCanvas;
+
+template <typename T>
+inline bool changed(T *storage, T val)
+{
+  if (*storage == val)
+    return false;
+  *storage = val;
+  return true;
+}
 
 void setup()
 {
@@ -14,39 +29,92 @@ void setup()
   cfg.serial_baudrate = 115200;
   M5.begin(cfg);
   M5.Display.setBrightness(63);
-  M5.Display.fillScreen(settings::colors::background);
+  displayWidth = M5.Display.width();
+  displayHeight = M5.Display.height();
+  displayCanvas = new M5Canvas(&M5.Display);
+  displayCanvas->setColorDepth(M5.Display.getColorDepth());
+  displayCanvas->createSprite(displayWidth, displayHeight);
+  displayCanvas->setBaseColor(settings::colors::background);
+  displayCanvas->setTextColor(settings::colors::text, settings::colors::background);
 
   WiFi.begin(settings::wifi::ssid, settings::wifi::password);
+
+  configTime(0, 0, settings::time::ntpServer);
+  setenv("TZ", settings::time::tz, 1);
+  tzset();
+}
+
+bool should_redraw()
+{
+  static bool last_wifi_status;
+  static time_t last_timetamp;
+  time_t now;
+  time(&now);
+
+  return changed(&last_wifi_status, wifi_status) ||
+         changed(&last_timetamp, now);
+}
+
+void redraw()
+{
+  displayCanvas->clear();
+
+  draw_icons();
+  draw_time();
+
+  M5.Display.waitDisplay();
+  displayCanvas->pushSprite(&M5.Display, 0, 0);
+}
+
+void draw_icons()
+{
+  displayCanvas->pushGrayscaleImage(
+      2, 2, icons::wifi::width, icons::wifi::height,
+      icons::wifi::data,
+      m5gfx::grayscale_8bit,
+      wifi_status ? settings::colors::icons::wifiUp : settings::colors::icons::wifiDown,
+      settings::colors::background);
+}
+
+void draw_time()
+{
+  time_t now;
+  struct tm timeinfo;
+  const int buflen = 64;
+  char buf[buflen];
+
+  time(&now);
+  localtime_r(&now, &timeinfo);
+  if (timeinfo.tm_year < 120)
+  {
+    return;
+  }
+  const char *weekday = weekdays_short[timeinfo.tm_wday][settings::lang];
+  strcpy(buf, weekday);
+  strftime(buf + strlen(weekday),
+           buflen - strlen(weekday),
+           time_format[settings::lang],
+           &timeinfo);
+  displayCanvas->setTextDatum(m5gfx::textdatum::baseline_right);
+  displayCanvas->drawString(buf, displayWidth - 2, 17, settings::fonts::currentTime);
 }
 
 void on_wifi_connected()
 {
   M5_LOGI("WiFi connected");
-  M5.Display.pushGrayscaleImage(
-      2, 2, icons::wifi::width, icons::wifi::height,
-      icons::wifi::data,
-      m5gfx::grayscale_8bit,
-      settings::colors::icons::wifiUp, settings::colors::background);
 }
 
 void on_wifi_disconnected()
 {
   M5_LOGI("WiFi disconnected");
-  M5.Display.pushGrayscaleImage(
-      2, 2, icons::wifi::width, icons::wifi::height,
-      icons::wifi::data,
-      m5gfx::grayscale_8bit,
-      settings::colors::icons::wifiDown, settings::colors::background);
 }
 
 void wifi_loop()
 {
-  static bool status;
-  bool new_status = WiFi.isConnected();
-  if (status == new_status)
+  if (!changed(&wifi_status, WiFi.isConnected()))
     return;
-  status = new_status;
-  if (status)
+
+  if (wifi_status)
     on_wifi_connected();
   else
     on_wifi_disconnected();
@@ -55,4 +123,6 @@ void wifi_loop()
 void loop()
 {
   wifi_loop();
+  if (should_redraw())
+    redraw();
 }
