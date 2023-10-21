@@ -1,5 +1,6 @@
 #include <M5Unified.h>
 #include <WiFi.h>
+#include <PubSubClient.h>
 #include <time.h>
 
 #include "fonts/all.h"
@@ -8,8 +9,12 @@
 #include "settings.hpp"
 
 bool wifi_status;
+bool mqtt_status;
 int displayWidth, displayHeight;
 M5Canvas *displayCanvas;
+
+WiFiClient wifi_client;
+PubSubClient mqtt_client(wifi_client);
 
 template <typename T>
 inline bool changed(T *storage, T val)
@@ -38,6 +43,8 @@ void setup()
   displayCanvas->setTextColor(settings::colors::text, settings::colors::background);
 
   WiFi.begin(settings::wifi::ssid, settings::wifi::password);
+
+  mqtt_client.setServer(settings::mqtt::server, settings::mqtt::port);
 
   configTime(0, 0, settings::time::ntpServer);
   setenv("TZ", settings::time::tz, 1);
@@ -72,7 +79,14 @@ void draw_icons()
       2, 2, icons::wifi::width, icons::wifi::height,
       icons::wifi::data,
       m5gfx::grayscale_8bit,
-      wifi_status ? settings::colors::icons::wifiUp : settings::colors::icons::wifiDown,
+      wifi_status ? settings::colors::icons::wifi : settings::colors::icons::down,
+      settings::colors::background);
+
+  displayCanvas->pushGrayscaleImage(
+      24, 2, icons::mqtt::width, icons::mqtt::height,
+      icons::mqtt::data,
+      m5gfx::grayscale_8bit,
+      mqtt_status ? settings::colors::icons::mqtt : settings::colors::icons::down,
       settings::colors::background);
 }
 
@@ -120,9 +134,47 @@ void wifi_loop()
     on_wifi_disconnected();
 }
 
+void on_mqtt_connected()
+{
+  M5_LOGI("MQTT connected");
+}
+
+void on_mqtt_disconnected()
+{
+  M5_LOGI("MQTT disconnected");
+}
+
+void mqtt_loop()
+{
+
+  if (wifi_status && !mqtt_status)
+  {
+    static time_t last_timetamp;
+    time_t now;
+    time(&now);
+    if (difftime(now, last_timetamp) >= settings::mqtt::reconnect)
+    {
+      last_timetamp = now;
+      M5_LOGI("Trying to connect MQTT");
+      mqtt_client.connect((String("M5Stack Core2 ") + WiFi.macAddress()).c_str());
+    }
+  }
+  if (!wifi_status && mqtt_status)
+    mqtt_client.disconnect();
+
+  if (changed(&mqtt_status, mqtt_client.connected()))
+    if (mqtt_status)
+      on_mqtt_connected();
+    else
+      on_mqtt_disconnected();
+
+  mqtt_client.loop();
+}
+
 void loop()
 {
   wifi_loop();
+  mqtt_loop();
   if (should_redraw())
     redraw();
 }

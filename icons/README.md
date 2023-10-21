@@ -7,3 +7,12 @@ curl -L https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined
    sed '1d;s/.*#000000/0x/;s/ .*/,/' | \
    xargs -n 20
 ```
+
+# Generating MQTT icon data
+
+```
+curl -L https://github.com/mqtt/mqttorg-graphics/raw/master/png/mqtt-icon-transparent.png | \
+   convert png:- -resize 16x16 txt: | \
+   sed '1d;s/.*#660066/0x/;s/ .*/,/' | \
+   xargs -n 16
+```
