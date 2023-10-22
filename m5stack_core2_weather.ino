@@ -4,7 +4,6 @@
 #include <ArduinoJson.h>
 #include <time.h>
 
-#include "fonts/all.h"
 #include "icons/icons.hpp"
 #include "lang.hpp"
 #include "settings.hpp"
@@ -17,10 +16,10 @@ M5Canvas *displayCanvas;
 WiFiClient wifi_client;
 PubSubClient mqtt_client(wifi_client);
 
-time_t timestamp;
-float temperature = NAN;
-float humidity = NAN;
-float pressure = NAN;
+time_t reading_timestamp = 0;
+float reading_temperature = NAN;
+float reading_humidity = NAN;
+float reading_pressure = NAN;
 
 template <typename T>
 inline bool changed(T *storage, T val)
@@ -60,13 +59,20 @@ void setup()
 
 bool should_redraw()
 {
-  static bool last_wifi_status;
-  static time_t last_timetamp;
+  static bool last_drawn_wifi_status;
+  static bool last_drawn_mqtt_status;
+  static time_t last_drawn_time;
+  static time_t last_drawn_reading_timestamp;
   time_t now;
   time(&now);
 
-  return changed(&last_wifi_status, wifi_status) ||
-         changed(&last_timetamp, now);
+  if (reading_timestamp != 0 && difftime(now, reading_timestamp) > 3600)
+    reading_timestamp = 0;
+
+  return changed(&last_drawn_wifi_status, wifi_status) |
+         changed(&last_drawn_mqtt_status, mqtt_status) |
+         changed(&last_drawn_time, now) |
+         changed(&last_drawn_reading_timestamp, reading_timestamp);
 }
 
 void redraw()
@@ -75,6 +81,7 @@ void redraw()
 
   draw_icons();
   draw_time();
+  draw_reading();
 
   M5.Display.waitDisplay();
   displayCanvas->pushSprite(&M5.Display, 0, 0);
@@ -120,6 +127,43 @@ void draw_time()
   displayCanvas->drawString(buf, displayWidth - 2, 17, settings::fonts::currentTime);
 }
 
+void draw_reading()
+{
+  const int buflen = 16;
+  char buf_temp[buflen], buf_hum[buflen], buf_press[buflen];
+
+  if (reading_timestamp)
+  {
+    sprintf(buf_temp, "%.1f°C", reading_temperature);
+    sprintf(buf_hum, "%.0f%%", reading_humidity);
+    sprintf(buf_press, "%.0f hPa", reading_pressure);
+  }
+  else
+  {
+    displayCanvas->setTextSize(3, 1);
+    strcpy(buf_temp, "-");
+    strcpy(buf_hum, "");
+    strcpy(buf_press, "");
+  }
+
+  displayCanvas->setTextDatum(m5gfx::textdatum::baseline_center);
+  displayCanvas->drawString(buf_temp,
+                            displayWidth / 2, 138,
+                            settings::fonts::temperature);
+
+  displayCanvas->setTextDatum(m5gfx::textdatum::baseline_left);
+  displayCanvas->drawString(buf_hum,
+                            14, displayHeight - 14,
+                            settings::fonts::humidity);
+
+  displayCanvas->setTextDatum(m5gfx::textdatum::baseline_right);
+  displayCanvas->drawString(buf_press,
+                            displayWidth - 14, displayHeight - 14,
+                            settings::fonts::pressure);
+
+  displayCanvas->setTextSize(1, 1);
+}
+
 void on_wifi_connected()
 {
   M5_LOGI("WiFi connected");
@@ -163,10 +207,12 @@ void mqtt_callback(char *topic, byte *payload, unsigned int length)
     M5_LOGE("Json deserialization error: %s", error.c_str());
     return;
   }
-  temperature = doc["temperature"] | NAN;
-  humidity = doc["humidity"] | NAN;
-  pressure = doc["pressure"] | NAN;
-  M5_LOGD("Received new reading: %.1f %.0f %.0f", temperature, humidity, pressure);
+  time(&reading_timestamp);
+  reading_temperature = doc["temperature"] | NAN;
+  reading_humidity = doc["humidity"] | NAN;
+  reading_pressure = doc["pressure"] | NAN;
+  M5_LOGD("Received new reading: %.1f %.0f %.0f",
+          reading_temperature, reading_humidity, reading_pressure);
 }
 
 void mqtt_loop()
@@ -174,12 +220,12 @@ void mqtt_loop()
 
   if (wifi_status && !mqtt_status)
   {
-    static time_t last_timetamp;
+    static time_t last_timestamp;
     time_t now;
     time(&now);
-    if (difftime(now, last_timetamp) >= settings::mqtt::reconnect)
+    if (difftime(now, last_timestamp) >= settings::mqtt::reconnect)
     {
-      last_timetamp = now;
+      last_timestamp = now;
       M5_LOGI("Trying to connect MQTT");
       mqtt_client.connect((String("M5Stack Core2 ") + WiFi.macAddress()).c_str());
     }

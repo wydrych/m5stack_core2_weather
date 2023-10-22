@@ -1,7 +1,9 @@
 #pragma once
 
 #include <M5GFX.h>
-#include "fonts/all.h"
+#include "fonts/NotoSans_SemiBold731fpt8b.hpp"
+#include "fonts/NotoSans_SemiBold20pt8b.hpp"
+#include "fonts/NotoSans_SemiBold40pt8b.hpp"
 #include "lang.hpp"
 
 #if __has_include("settings-private.hpp")
@@ -64,5 +66,8 @@ namespace settings
     namespace fonts
     {
         const m5gfx::IFont *const currentTime = &NotoSans_SemiBold731fpt8b;
+        const m5gfx::IFont *const temperature = &NotoSans_SemiBold40pt8b;
+        const m5gfx::IFont *const humidity = &NotoSans_SemiBold20pt8b;
+        const m5gfx::IFont *const pressure = &NotoSans_SemiBold20pt8b;
     }
 }

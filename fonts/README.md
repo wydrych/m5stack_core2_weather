@@ -20,12 +20,16 @@ For NotoSans, 5120 fractional points result in cap height of 112 px.
 
 ```
 (
-    echo '#pragma once'
-    echo
-    for file in *.ttf; do
-        fontconvert $file 731f 32 383 >> tmp
-        awk '($2 == "GFXfont") {print "#include \"" $3 ".hpp\""}' tmp
-        mv tmp `awk '($2 == "GFXfont") {print $3 ".hpp"}' tmp`
+  echo '#pragma once'
+  echo
+  for file in *.ttf; do
+    for size in 731f 20 40; do
+      echo '#pragma once' > tmp
+      echo >> tmp
+      fontconvert $file $size 32 383 >> tmp
+      awk '($2 == "GFXfont") {print "#include \"" $3 ".hpp\""}' tmp
+      mv tmp `awk '($2 == "GFXfont") {print $3 ".hpp"}' tmp`
     done
+  done
 ) > all.h
 ```
