@@ -1,6 +1,7 @@
 #include <M5Unified.h>
 #include <WiFi.h>
 #include <PubSubClient.h>
+#include <ArduinoJson.h>
 #include <time.h>
 
 #include "fonts/all.h"
@@ -15,6 +16,11 @@ M5Canvas *displayCanvas;
 
 WiFiClient wifi_client;
 PubSubClient mqtt_client(wifi_client);
+
+time_t timestamp;
+float temperature = NAN;
+float humidity = NAN;
+float pressure = NAN;
 
 template <typename T>
 inline bool changed(T *storage, T val)
@@ -45,6 +51,7 @@ void setup()
   WiFi.begin(settings::wifi::ssid, settings::wifi::password);
 
   mqtt_client.setServer(settings::mqtt::server, settings::mqtt::port);
+  mqtt_client.setCallback(mqtt_callback);
 
   configTime(0, 0, settings::time::ntpServer);
   setenv("TZ", settings::time::tz, 1);
@@ -137,11 +144,29 @@ void wifi_loop()
 void on_mqtt_connected()
 {
   M5_LOGI("MQTT connected");
+  mqtt_client.subscribe(settings::mqtt::topic);
 }
 
 void on_mqtt_disconnected()
 {
   M5_LOGI("MQTT disconnected");
+}
+
+void mqtt_callback(char *topic, byte *payload, unsigned int length)
+{
+  const int json_doc_capacity = JSON_OBJECT_SIZE(7); // WSDCGQ11LM
+  StaticJsonDocument<json_doc_capacity> doc;
+
+  DeserializationError error = deserializeJson(doc, payload, length);
+  if (error)
+  {
+    M5_LOGE("Json deserialization error: %s", error.c_str());
+    return;
+  }
+  temperature = doc["temperature"] | NAN;
+  humidity = doc["humidity"] | NAN;
+  pressure = doc["pressure"] | NAN;
+  M5_LOGD("Received new reading: %.1f %.0f %.0f", temperature, humidity, pressure);
 }
 
 void mqtt_loop()

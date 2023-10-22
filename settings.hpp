@@ -20,6 +20,9 @@
 #ifndef MQTT_PORT
 #define MQTT_PORT 1883
 #endif
+#ifndef MQTT_TOPIC
+#define MQTT_TOPIC NULL
+#endif
 #ifndef TZ
 #define TZ UTC
 #endif
@@ -45,6 +48,7 @@ namespace settings
         const char *const server = MQTT_SERVER;
         const uint16_t port = MQTT_PORT;
         const double reconnect = 3.0;
+        const char *const topic = MQTT_TOPIC;
     }
     namespace colors
     {
