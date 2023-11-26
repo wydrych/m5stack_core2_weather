@@ -217,12 +217,18 @@ void mqtt_callback(char *topic, byte *payload, unsigned int length)
 
 void mqtt_loop()
 {
-
   if (wifi_status && !mqtt_status)
   {
     static time_t last_timestamp;
     time_t now;
+    struct tm timeinfo;
     time(&now);
+    localtime_r(&now, &timeinfo);
+    if (timeinfo.tm_year < 120)
+    {
+      // do not connect to MQTT until time is set
+      return;
+    }
     if (difftime(now, last_timestamp) >= settings::mqtt::reconnect)
     {
       last_timestamp = now;
