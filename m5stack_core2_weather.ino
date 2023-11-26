@@ -134,7 +134,7 @@ void draw_reading()
 
   if (reading_timestamp)
   {
-    sprintf(buf_temp, "%.1f°C", reading_temperature);
+    sprintf(buf_temp, "%.1f°C", round(reading_temperature * 10) / 10 + 0.0);
     sprintf(buf_hum, "%.0f%%", reading_humidity);
     sprintf(buf_press, "%.0f hPa", reading_pressure);
   }
