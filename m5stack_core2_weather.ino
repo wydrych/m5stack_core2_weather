@@ -9,23 +9,23 @@
 #include "settings.hpp"
 #include "panels/header.hpp"
 #include "panels/main.hpp"
+#include "panels/forecast.hpp"
 
 bool wifi_status;
 bool mqtt_status;
 
-int displayWidth, displayHeight;
-#define HEADER_HEIGHT 22
-M5Canvas *displayCanvas,
-    *headerPanelCanvas,
-    *mainPanelCanvas;
+M5Canvas *displayCanvas;
 
 WiFiClient wifi_client;
 PubSubClient mqtt_client(wifi_client);
 
 HeaderPanel *headerPanel;
 MainPanel *mainPanel;
-Panel *currentPanel;
-Panel *lastDrawnPlanel;
+ForecastPanel *temperatureForecastPanel,
+    *rainForecastPanel,
+    *pressureForecastPanel;
+Panel *currentPanel,
+    *lastDrawnPlanel;
 
 template <typename T>
 inline bool changed(T *storage, T val)
@@ -46,26 +46,22 @@ void setup()
   M5.begin(cfg);
   M5.Display.setBrightness(63);
 
-  displayWidth = M5.Display.width();
-  displayHeight = M5.Display.height();
+  auto displayWidth = M5.Display.width();
+  auto displayHeight = M5.Display.height();
 
   displayCanvas = new M5Canvas(&M5.Display);
-  headerPanelCanvas = new M5Canvas(displayCanvas);
-  mainPanelCanvas = new M5Canvas(displayCanvas);
 
-  for (M5Canvas *canvas : (M5Canvas *[]){displayCanvas, headerPanelCanvas, mainPanelCanvas})
-  {
-    canvas->setColorDepth(M5.Display.getColorDepth());
-    canvas->setBaseColor(settings::colors::background);
-    canvas->setTextColor(settings::colors::text, settings::colors::background);
-  }
-
+  displayCanvas->setColorDepth(M5.Display.getColorDepth());
   displayCanvas->createSprite(displayWidth, displayHeight);
-  headerPanelCanvas->createSprite(displayWidth, HEADER_HEIGHT);
-  mainPanelCanvas->createSprite(displayWidth, displayHeight - HEADER_HEIGHT);
 
-  headerPanel = new HeaderPanel(headerPanelCanvas);
-  mainPanel = new MainPanel(mainPanelCanvas);
+  headerPanel = new HeaderPanel(displayCanvas, displayWidth, settings::header_height, M5.Display.getColorDepth());
+  mainPanel = new MainPanel(displayCanvas, displayWidth, displayHeight - settings::header_height, M5.Display.getColorDepth());
+  temperatureForecastPanel = new ForecastPanel(displayCanvas, displayWidth, displayHeight - settings::header_height, M5.Display.getColorDepth());
+  rainForecastPanel = new ForecastPanel(displayCanvas, displayWidth, displayHeight - settings::header_height, M5.Display.getColorDepth());
+  pressureForecastPanel = new ForecastPanel(displayCanvas, displayWidth, displayHeight - settings::header_height, M5.Display.getColorDepth());
+
+  mainPanel->setForecastPanels(temperatureForecastPanel, rainForecastPanel, pressureForecastPanel);
+
   currentPanel = mainPanel;
 
   WiFi.begin(settings::wifi::ssid, settings::wifi::password);
@@ -80,14 +76,16 @@ void setup()
 
 void redraw()
 {
+  if (currentPanel == nullptr)
+    currentPanel = mainPanel;
   bool headerRedrawn = headerPanel->redraw();
   bool currentPanelRedrawn = currentPanel->redraw();
   if (!headerRedrawn && !currentPanelRedrawn && lastDrawnPlanel == currentPanel)
     return;
 
   displayCanvas->clear();
-  headerPanelCanvas->pushSprite(0, 0);
-  currentPanel->canvas->pushSprite(0, HEADER_HEIGHT);
+  headerPanel->canvas->pushSprite(0, 0);
+  currentPanel->canvas->pushSprite(0, settings::header_height);
   lastDrawnPlanel = currentPanel;
 
   M5.Display.waitDisplay();
@@ -178,8 +176,24 @@ void mqtt_loop()
   mqtt_client.loop();
 }
 
+void touch_loop()
+{
+  M5.update();
+  if (M5.Touch.getCount() != 1)
+    return;
+
+  auto t = M5.Touch.getDetail();
+  if (!t.wasClicked())
+    return;
+
+  M5_LOGI("touch (%d,%d)", t.x, t.y);
+  if (t.y >= settings::header_height)
+    currentPanel = currentPanel->touch(t.x, t.y - settings::header_height);
+}
+
 void loop()
 {
+  touch_loop();
   wifi_loop();
   mqtt_loop();
   redraw();

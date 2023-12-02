@@ -35,6 +35,7 @@
 namespace settings
 {
     const Lang lang = LANG;
+    const int32_t header_height = 22;
     namespace time
     {
         const char *const ntpServer = "pool.ntp.org";

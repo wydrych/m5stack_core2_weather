@@ -1,6 +1,7 @@
 #pragma once
 
 #include "panel.hpp"
+#include "forecast.hpp"
 
 class MainPanel : public Panel
 {
@@ -9,6 +10,10 @@ class MainPanel : public Panel
     float reading_humidity;
     float reading_pressure;
     unsigned long last_drawn_reading_millis;
+
+    ForecastPanel *temperatureForecastPanel,
+        *rainForecastPanel,
+        *pressureForecastPanel;
 
     void draw_reading()
     {
@@ -48,7 +53,8 @@ class MainPanel : public Panel
     }
 
 public:
-    MainPanel(M5Canvas *canvas) : Panel(canvas)
+    MainPanel(M5Canvas *parentCanvas, int32_t w, int32_t h, lgfx::v1::color_depth_t depth)
+        : Panel(parentCanvas, w, h, depth)
     {
         reading_millis = 0;
         last_drawn_reading_millis = -1;
@@ -62,6 +68,13 @@ public:
         this->reading_humidity = reading_humidity;
         this->reading_pressure = reading_pressure;
         reading_millis = millis();
+    }
+
+    void setForecastPanels(ForecastPanel *temperature, ForecastPanel *rain, ForecastPanel *pressure)
+    {
+        temperatureForecastPanel = temperature;
+        rainForecastPanel = rain;
+        pressureForecastPanel = pressure;
     }
 
     virtual bool redraw()
@@ -80,5 +93,14 @@ public:
         draw_reading();
 
         return true;
+    }
+
+    virtual Panel *touch(int16_t x, int16_t y)
+    {
+        if (y <= canvas->height() * 2 / 3)
+            return temperatureForecastPanel;
+        if (x <= canvas->width() / 2)
+            return rainForecastPanel;
+        return pressureForecastPanel;
     }
 };

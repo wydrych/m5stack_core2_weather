@@ -7,7 +7,7 @@
 #include "../lang.hpp"
 #include "../settings.hpp"
 
-class HeaderPanel : public Panel
+class HeaderPanel : public PanelBase
 {
     bool wifi_status;
     bool last_drawn_wifi_status;
@@ -54,7 +54,8 @@ class HeaderPanel : public Panel
     }
 
 public:
-    HeaderPanel(M5Canvas *canvas) : Panel(canvas)
+    HeaderPanel(M5Canvas *parentCanvas, int32_t w, int32_t h, lgfx::v1::color_depth_t depth)
+        : PanelBase(parentCanvas, w, h, depth)
     {
         wifi_status = last_drawn_wifi_status = false;
         mqtt_status = last_drawn_mqtt_status = false;
