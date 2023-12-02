@@ -7,19 +7,25 @@
 #include "icons/icons.hpp"
 #include "lang.hpp"
 #include "settings.hpp"
+#include "panels/header.hpp"
+#include "panels/main.hpp"
 
 bool wifi_status;
 bool mqtt_status;
+
 int displayWidth, displayHeight;
-M5Canvas *displayCanvas;
+#define HEADER_HEIGHT 22
+M5Canvas *displayCanvas,
+    *headerPanelCanvas,
+    *mainPanelCanvas;
 
 WiFiClient wifi_client;
 PubSubClient mqtt_client(wifi_client);
 
-time_t reading_timestamp = 0;
-float reading_temperature = NAN;
-float reading_humidity = NAN;
-float reading_pressure = NAN;
+HeaderPanel *headerPanel;
+MainPanel *mainPanel;
+Panel *currentPanel;
+Panel *lastDrawnPlanel;
 
 template <typename T>
 inline bool changed(T *storage, T val)
@@ -39,13 +45,28 @@ void setup()
   cfg.serial_baudrate = 115200;
   M5.begin(cfg);
   M5.Display.setBrightness(63);
+
   displayWidth = M5.Display.width();
   displayHeight = M5.Display.height();
+
   displayCanvas = new M5Canvas(&M5.Display);
-  displayCanvas->setColorDepth(M5.Display.getColorDepth());
+  headerPanelCanvas = new M5Canvas(displayCanvas);
+  mainPanelCanvas = new M5Canvas(displayCanvas);
+
+  for (M5Canvas *canvas : (M5Canvas *[]){displayCanvas, headerPanelCanvas, mainPanelCanvas})
+  {
+    canvas->setColorDepth(M5.Display.getColorDepth());
+    canvas->setBaseColor(settings::colors::background);
+    canvas->setTextColor(settings::colors::text, settings::colors::background);
+  }
+
   displayCanvas->createSprite(displayWidth, displayHeight);
-  displayCanvas->setBaseColor(settings::colors::background);
-  displayCanvas->setTextColor(settings::colors::text, settings::colors::background);
+  headerPanelCanvas->createSprite(displayWidth, HEADER_HEIGHT);
+  mainPanelCanvas->createSprite(displayWidth, displayHeight - HEADER_HEIGHT);
+
+  headerPanel = new HeaderPanel(headerPanelCanvas);
+  mainPanel = new MainPanel(mainPanelCanvas);
+  currentPanel = mainPanel;
 
   WiFi.begin(settings::wifi::ssid, settings::wifi::password);
 
@@ -57,111 +78,20 @@ void setup()
   tzset();
 }
 
-bool should_redraw()
-{
-  static bool last_drawn_wifi_status;
-  static bool last_drawn_mqtt_status;
-  static time_t last_drawn_time;
-  static time_t last_drawn_reading_timestamp;
-  time_t now;
-  time(&now);
-
-  if (reading_timestamp != 0 && difftime(now, reading_timestamp) > 3600)
-    reading_timestamp = 0;
-
-  return changed(&last_drawn_wifi_status, wifi_status) |
-         changed(&last_drawn_mqtt_status, mqtt_status) |
-         changed(&last_drawn_time, now) |
-         changed(&last_drawn_reading_timestamp, reading_timestamp);
-}
-
 void redraw()
 {
-  displayCanvas->clear();
+  bool headerRedrawn = headerPanel->redraw();
+  bool currentPanelRedrawn = currentPanel->redraw();
+  if (!headerRedrawn && !currentPanelRedrawn && lastDrawnPlanel == currentPanel)
+    return;
 
-  draw_icons();
-  draw_time();
-  draw_reading();
+  displayCanvas->clear();
+  headerPanelCanvas->pushSprite(0, 0);
+  currentPanel->canvas->pushSprite(0, HEADER_HEIGHT);
+  lastDrawnPlanel = currentPanel;
 
   M5.Display.waitDisplay();
-  displayCanvas->pushSprite(&M5.Display, 0, 0);
-}
-
-void draw_icons()
-{
-  displayCanvas->pushGrayscaleImage(
-      2, 2, icons::wifi::width, icons::wifi::height,
-      icons::wifi::data,
-      m5gfx::grayscale_8bit,
-      wifi_status ? settings::colors::icons::wifi : settings::colors::icons::down,
-      settings::colors::background);
-
-  displayCanvas->pushGrayscaleImage(
-      24, 2, icons::mqtt::width, icons::mqtt::height,
-      icons::mqtt::data,
-      m5gfx::grayscale_8bit,
-      mqtt_status ? settings::colors::icons::mqtt : settings::colors::icons::down,
-      settings::colors::background);
-}
-
-void draw_time()
-{
-  time_t now;
-  struct tm timeinfo;
-  const int buflen = 64;
-  char buf[buflen];
-
-  time(&now);
-  localtime_r(&now, &timeinfo);
-  if (timeinfo.tm_year < 120)
-  {
-    return;
-  }
-  const char *weekday = weekdays_short[timeinfo.tm_wday][settings::lang];
-  strcpy(buf, weekday);
-  strftime(buf + strlen(weekday),
-           buflen - strlen(weekday),
-           time_format[settings::lang],
-           &timeinfo);
-  displayCanvas->setTextDatum(m5gfx::textdatum::baseline_right);
-  displayCanvas->drawString(buf, displayWidth - 2, 17, settings::fonts::currentTime);
-}
-
-void draw_reading()
-{
-  const int buflen = 16;
-  char buf_temp[buflen], buf_hum[buflen], buf_press[buflen];
-
-  if (reading_timestamp)
-  {
-    sprintf(buf_temp, "%.1f°C", round(reading_temperature * 10) / 10 + 0.0);
-    sprintf(buf_hum, "%.0f%%", reading_humidity);
-    sprintf(buf_press, "%.0f hPa", reading_pressure);
-  }
-  else
-  {
-    displayCanvas->setTextSize(3, 1);
-    strcpy(buf_temp, "-");
-    strcpy(buf_hum, "");
-    strcpy(buf_press, "");
-  }
-
-  displayCanvas->setTextDatum(m5gfx::textdatum::baseline_center);
-  displayCanvas->drawString(buf_temp,
-                            displayWidth / 2, 138,
-                            settings::fonts::temperature);
-
-  displayCanvas->setTextDatum(m5gfx::textdatum::baseline_left);
-  displayCanvas->drawString(buf_hum,
-                            14, displayHeight - 14,
-                            settings::fonts::humidity);
-
-  displayCanvas->setTextDatum(m5gfx::textdatum::baseline_right);
-  displayCanvas->drawString(buf_press,
-                            displayWidth - 14, displayHeight - 14,
-                            settings::fonts::pressure);
-
-  displayCanvas->setTextSize(1, 1);
+  displayCanvas->pushSprite(0, 0);
 }
 
 void on_wifi_connected()
@@ -178,6 +108,8 @@ void wifi_loop()
 {
   if (!changed(&wifi_status, WiFi.isConnected()))
     return;
+
+  headerPanel->setWifiStatus(wifi_status);
 
   if (wifi_status)
     on_wifi_connected();
@@ -198,6 +130,9 @@ void on_mqtt_disconnected()
 
 void mqtt_callback(char *topic, byte *payload, unsigned int length)
 {
+  float reading_temperature;
+  float reading_humidity;
+  float reading_pressure;
   const int json_doc_capacity = JSON_OBJECT_SIZE(7); // WSDCGQ11LM
   StaticJsonDocument<json_doc_capacity> doc;
 
@@ -207,31 +142,23 @@ void mqtt_callback(char *topic, byte *payload, unsigned int length)
     M5_LOGE("Json deserialization error: %s", error.c_str());
     return;
   }
-  time(&reading_timestamp);
   reading_temperature = doc["temperature"] | NAN;
   reading_humidity = doc["humidity"] | NAN;
   reading_pressure = doc["pressure"] | NAN;
-  M5_LOGD("Received new reading: %.1f %.0f %.0f",
+  M5_LOGD("Received new reading: %f %f %f",
           reading_temperature, reading_humidity, reading_pressure);
+  mainPanel->setReading(reading_temperature, reading_humidity, reading_pressure);
 }
 
 void mqtt_loop()
 {
   if (wifi_status && !mqtt_status)
   {
-    static time_t last_timestamp;
-    time_t now;
-    struct tm timeinfo;
-    time(&now);
-    localtime_r(&now, &timeinfo);
-    if (timeinfo.tm_year < 120)
+    static unsigned long last_reconnect;
+    unsigned long now = millis();
+    if (now - last_reconnect >= settings::mqtt::reconnect * 1000)
     {
-      // do not connect to MQTT until time is set
-      return;
-    }
-    if (difftime(now, last_timestamp) >= settings::mqtt::reconnect)
-    {
-      last_timestamp = now;
+      last_reconnect = now;
       M5_LOGI("Trying to connect MQTT");
       mqtt_client.connect((String("M5Stack Core2 ") + WiFi.macAddress()).c_str());
     }
@@ -240,11 +167,14 @@ void mqtt_loop()
     mqtt_client.disconnect();
 
   if (changed(&mqtt_status, mqtt_client.connected()))
+  {
+    headerPanel->setMqttStatus(mqtt_status);
+
     if (mqtt_status)
       on_mqtt_connected();
     else
       on_mqtt_disconnected();
-
+  }
   mqtt_client.loop();
 }
 
@@ -252,6 +182,5 @@ void loop()
 {
   wifi_loop();
   mqtt_loop();
-  if (should_redraw())
-    redraw();
+  redraw();
 }
