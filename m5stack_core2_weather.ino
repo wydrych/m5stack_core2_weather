@@ -1,3 +1,4 @@
+#include <esp_task_wdt.h>
 #include <M5Unified.h>
 #include <WiFi.h>
 #include <PubSubClient.h>
@@ -38,6 +39,9 @@ inline bool changed(T *storage, T val)
 
 void setup()
 {
+  esp_task_wdt_init(settings::watchdog_timer, true);
+  esp_task_wdt_add(NULL);
+
   M5.Log.setEnableColor(m5::log_target_serial, false);
   M5.Log.setLogLevel(m5::log_target_serial, ESP_LOG_DEBUG);
 
@@ -193,6 +197,7 @@ void touch_loop()
 
 void loop()
 {
+  esp_task_wdt_reset();
   touch_loop();
   wifi_loop();
   mqtt_loop();
