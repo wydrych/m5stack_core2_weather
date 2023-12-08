@@ -6,6 +6,7 @@
 #include <time.h>
 
 #include "icons/icons.hpp"
+#include "forecast.hpp"
 #include "lang.hpp"
 #include "settings.hpp"
 #include "panels/header.hpp"
@@ -158,7 +159,7 @@ void mqtt_loop()
   {
     static unsigned long last_reconnect;
     unsigned long now = millis();
-    if (now - last_reconnect >= settings::mqtt::reconnect * 1000)
+    if (last_reconnect == 0 || now - last_reconnect >= settings::mqtt::reconnect * 1000)
     {
       last_reconnect = now;
       M5_LOGI("Trying to connect MQTT");
@@ -201,5 +202,6 @@ void loop()
   touch_loop();
   wifi_loop();
   mqtt_loop();
+  forecast_loop();
   redraw();
 }

@@ -5,6 +5,7 @@
 #include "fonts/NotoSans_SemiBold20pt8b.hpp"
 #include "fonts/NotoSans_SemiBold40pt8b.hpp"
 #include "lang.hpp"
+#include "ca.hpp"
 
 #if __has_include("settings-private.hpp")
 #include "settings-private.hpp"
@@ -25,6 +26,12 @@
 #ifndef MQTT_TOPIC
 #define MQTT_TOPIC NULL
 #endif
+#ifndef FORECAST_LAT
+#define FORECAST_LAT 52.232222
+#endif
+#ifndef FORECAST_LON
+#define FORECAST_LON 21.008333
+#endif
 #ifndef TZ
 #define TZ UTC
 #endif
@@ -36,7 +43,7 @@ namespace settings
 {
     const Lang lang = LANG;
     const int32_t header_height = 22;
-    const uint32_t watchdog_timer = 8;
+    const uint32_t watchdog_timer = 60;
     namespace time
     {
         const char *const ntpServer = "pool.ntp.org";
@@ -53,6 +60,16 @@ namespace settings
         const uint16_t port = MQTT_PORT;
         const double reconnect = 3.0;
         const char *const topic = MQTT_TOPIC;
+    }
+    namespace forecast
+    {
+        const char *const base_url = "https://devmgramapi.meteo.pl/meteorograms/";
+        const char *const available = "available";
+        const char *const model = "um4_60";
+        const unsigned long retry = 10;
+        const unsigned long refresh = 10 * 60;
+        const double lat = FORECAST_LAT;
+        const double lon = FORECAST_LON;
     }
     namespace colors
     {
