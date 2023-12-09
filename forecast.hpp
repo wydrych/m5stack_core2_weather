@@ -9,12 +9,53 @@
 
 extern bool wifi_status;
 
-struct forecast
+struct forecast_entry_t
 {
     time_t start;
     time_t interval;
-    std::vector<double> points;
+    std::vector<float> points;
 };
+
+struct forecast_t
+{
+    forecast_entry_t airtmp_point;
+    forecast_entry_t wchill_point;
+};
+
+bool forecast_convert(JsonObject &data, const char *key, forecast_entry_t &target)
+{
+    JsonObject entry = data[key];
+    if (entry.isNull())
+    {
+        M5_LOGE("forecast does not contain data for %s", key);
+        return false;
+    }
+
+    M5_LOGD("converting %s", key);
+
+    target.start = entry["first_timestamp"];
+    target.interval = entry["interval"];
+    JsonArray entry_data = entry["data"];
+
+    if (target.start == 0 || target.interval == 0 ||
+        entry_data.isNull() || entry_data.size() == 0)
+    {
+        M5_LOGE("forecast does not contain valid data for %s", key);
+        return false;
+    }
+
+    target.points.reserve(entry_data.size());
+    for (JsonVariant value : entry_data)
+    {
+        if (!value.is<float>())
+        {
+            M5_LOGE("forecast does not contain valid data points for %s", key);
+            return false;
+        }
+        target.points.push_back(value.as<float>());
+    }
+    return true;
+}
 
 bool https_json_request(JsonDocument &doc, const char *root_ca, const char *method, const char *url, uint8_t *payload, size_t payload_size)
 {
@@ -90,7 +131,7 @@ String forecast_fetch_prepare_payload(time_t timestamp)
     return doc.as<String>();
 }
 
-bool forecast_fetch(time_t timestamp)
+bool forecast_fetch(time_t timestamp, forecast_t &target)
 {
     String payload = forecast_fetch_prepare_payload(timestamp);
     M5_LOGD("request payload: %s", payload.c_str());
@@ -108,35 +149,8 @@ bool forecast_fetch(time_t timestamp)
         return false;
     }
 
-    JsonObject airtmp_point = data["airtmp_point"];
-    if (airtmp_point.isNull())
-    {
-        M5_LOGE("%s does not contain data for airtmp_point", model_url.c_str());
-        return false;
-    }
-
-    JsonVariant airtmp_point_timestamp = airtmp_point["first_timestamp"];
-    JsonArray airtmp_point_data = airtmp_point["data"];
-    JsonVariant airtmp_point_interval = airtmp_point["interval"];
-
-    if (!airtmp_point_timestamp.is<const char *>() ||
-        airtmp_point_data.isNull() ||
-        !airtmp_point_interval.is<time_t>())
-    {
-        M5_LOGE("%s does not contain valid data for airtmp_point", model_url.c_str());
-        return false;
-    }
-
-    for (JsonVariant value : airtmp_point_data)
-    {
-        if (!value.is<float>())
-        {
-            M5_LOGE("%s does not contain valid data points for airtmp_point", model_url.c_str());
-            return false;
-        }
-    }
-
-    return true;
+    return forecast_convert(data, "airtmp_point", target.airtmp_point) &&
+           forecast_convert(data, "wchill_point", target.wchill_point);
 }
 
 void forecast_loop()
@@ -168,10 +182,16 @@ void forecast_loop()
 
     M5_LOGI("newer forecast available: %d", latest_available);
 
-    if (forecast_fetch(latest_available))
+    forecast_t forecast;
+    if (!forecast_fetch(latest_available, forecast))
     {
-        M5_LOGI("new forecast fetched successfully", latest_available);
-        last_fetched = latest_available;
-        last_refresh = now;
+        M5_LOGE("failed to fetch and convert forecast");
+        return;
     }
+
+    M5_LOGI("new forecast fetched successfully", latest_available);
+    M5_LOGD("new forecast fetched successfully: airtmp_point: %d+%dx%d, [0]: %f", forecast.airtmp_point.start, forecast.airtmp_point.points.size(), forecast.airtmp_point.interval, forecast.airtmp_point.points[0]);
+    M5_LOGD("new forecast fetched successfully: wchill_point: %d+%dx%d, [0]: %f", forecast.wchill_point.start, forecast.wchill_point.points.size(), forecast.wchill_point.interval, forecast.wchill_point.points[0]);
+    last_fetched = latest_available;
+    last_refresh = now;
 }
