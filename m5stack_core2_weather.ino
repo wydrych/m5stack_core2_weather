@@ -196,6 +196,10 @@ void touch_loop()
     currentPanel = currentPanel->touch(t.x, t.y - settings::header_height);
 }
 
+void on_forecast_successfull_fetch(time_t timestamp) {
+  headerPanel->forecastFetched(timestamp);
+}
+
 void loop()
 {
   esp_task_wdt_reset();

@@ -5,27 +5,12 @@
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 
+#include "forecast.h"
 #include "settings.hpp"
 
 extern bool wifi_status;
 
-template <typename T>
-struct forecast_entry_t
-{
-    time_t start;
-    time_t interval;
-    std::vector<T> points;
-};
-
-struct forecast_t
-{
-    forecast_entry_t<float> airtmp_point;
-    forecast_entry_t<float> wchill_point;
-    forecast_entry_t<float> pcpttl_aver;
-    forecast_entry_t<float> pcpttl_max;
-    forecast_entry_t<uint8_t> pcpttl_type_max;
-    forecast_entry_t<float> trpres_point;
-};
+forecast_t forecast;
 
 template <typename T>
 bool forecast_convert(JsonObject &data, const char *key, forecast_entry_t<T> &target)
@@ -192,20 +177,22 @@ void forecast_loop()
 
     M5_LOGI("newer forecast available: %d", latest_available);
 
-    forecast_t forecast;
-    if (!forecast_fetch(latest_available, forecast))
+    forecast_t new_forecast;
+    if (!forecast_fetch(latest_available, new_forecast))
     {
         M5_LOGE("failed to fetch and convert forecast");
         return;
     }
 
     M5_LOGI("new forecast fetched successfully", latest_available);
-    M5_LOGD("new forecast: airtmp_point: %d+%dx%d, [0]: %f", forecast.airtmp_point.start, forecast.airtmp_point.points.size(), forecast.airtmp_point.interval, forecast.airtmp_point.points[0]);
-    M5_LOGD("new forecast: wchill_point: %d+%dx%d, [0]: %f", forecast.wchill_point.start, forecast.wchill_point.points.size(), forecast.wchill_point.interval, forecast.wchill_point.points[0]);
-    M5_LOGD("new forecast: pcpttl_aver: %d+%dx%d, [0]: %f", forecast.pcpttl_aver.start, forecast.pcpttl_aver.points.size(), forecast.pcpttl_aver.interval, forecast.pcpttl_aver.points[0]);
-    M5_LOGD("new forecast: pcpttl_max: %d+%dx%d, [0]: %f", forecast.pcpttl_max.start, forecast.pcpttl_max.points.size(), forecast.pcpttl_max.interval, forecast.pcpttl_max.points[0]);
-    M5_LOGD("new forecast: pcpttl_type_max: %d+%dx%d, [0]: %d", forecast.pcpttl_type_max.start, forecast.pcpttl_type_max.points.size(), forecast.pcpttl_type_max.interval, forecast.pcpttl_type_max.points[0]);
-    M5_LOGD("new forecast: trpres_point: %d+%dx%d, [0]: %f", forecast.trpres_point.start, forecast.trpres_point.points.size(), forecast.trpres_point.interval, forecast.trpres_point.points[0]);
+    M5_LOGD("new forecast: airtmp_point: %d+%dx%d, [0]: %f", new_forecast.airtmp_point.start, new_forecast.airtmp_point.points.size(), new_forecast.airtmp_point.interval, new_forecast.airtmp_point.points[0]);
+    M5_LOGD("new forecast: wchill_point: %d+%dx%d, [0]: %f", new_forecast.wchill_point.start, new_forecast.wchill_point.points.size(), new_forecast.wchill_point.interval, new_forecast.wchill_point.points[0]);
+    M5_LOGD("new forecast: pcpttl_aver: %d+%dx%d, [0]: %f", new_forecast.pcpttl_aver.start, new_forecast.pcpttl_aver.points.size(), new_forecast.pcpttl_aver.interval, new_forecast.pcpttl_aver.points[0]);
+    M5_LOGD("new forecast: pcpttl_max: %d+%dx%d, [0]: %f", new_forecast.pcpttl_max.start, new_forecast.pcpttl_max.points.size(), new_forecast.pcpttl_max.interval, new_forecast.pcpttl_max.points[0]);
+    M5_LOGD("new forecast: pcpttl_type_max: %d+%dx%d, [0]: %d", new_forecast.pcpttl_type_max.start, new_forecast.pcpttl_type_max.points.size(), new_forecast.pcpttl_type_max.interval, new_forecast.pcpttl_type_max.points[0]);
+    M5_LOGD("new forecast: trpres_point: %d+%dx%d, [0]: %f", new_forecast.trpres_point.start, new_forecast.trpres_point.points.size(), new_forecast.trpres_point.interval, new_forecast.trpres_point.points[0]);
+    forecast = new_forecast;
     last_fetched = latest_available;
     last_refresh = now;
+    on_forecast_successfull_fetch(last_fetched);
 }

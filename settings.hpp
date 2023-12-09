@@ -27,10 +27,10 @@
 #define MQTT_TOPIC NULL
 #endif
 #ifndef FORECAST_LAT
-#define FORECAST_LAT 52.232222
+#define FORECAST_LAT NAN
 #endif
 #ifndef FORECAST_LON
-#define FORECAST_LON 21.008333
+#define FORECAST_LON NAN
 #endif
 #ifndef TZ
 #define TZ UTC
@@ -70,6 +70,7 @@ namespace settings
         const unsigned long refresh = 10 * 60;
         const double lat = FORECAST_LAT;
         const double lon = FORECAST_LON;
+        const unsigned long expiry = 24 * 3600;
     }
     namespace colors
     {
@@ -80,6 +81,7 @@ namespace settings
             const uint32_t down = m5gfx::convert_to_rgb888(0x979797u);
             const uint32_t wifi = m5gfx::convert_to_rgb888(0x0000B0u);
             const uint32_t mqtt = m5gfx::convert_to_rgb888(0x660066u);
+            const uint32_t meteo = m5gfx::convert_to_rgb888(0x0a328cu);
         }
     }
     namespace fonts

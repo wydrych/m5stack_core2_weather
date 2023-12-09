@@ -13,7 +13,10 @@ class HeaderPanel : public PanelBase
     bool last_drawn_wifi_status;
     bool mqtt_status;
     bool last_drawn_mqtt_status;
+    bool forecast_status;
+    bool last_drawn_forecast_status;
     time_t last_drawn_time;
+    time_t forecast_timestamp;
 
     void draw_icons()
     {
@@ -29,6 +32,13 @@ class HeaderPanel : public PanelBase
             icons::mqtt::data,
             m5gfx::grayscale_8bit,
             mqtt_status ? settings::colors::icons::mqtt : settings::colors::icons::down,
+            settings::colors::background);
+
+        canvas->pushGrayscaleImage(
+            42, 2, icons::meteo::width, icons::meteo::height,
+            icons::meteo::data,
+            m5gfx::grayscale_8bit,
+            forecast_status ? settings::colors::icons::meteo : settings::colors::icons::down,
             settings::colors::background);
     }
 
@@ -59,6 +69,8 @@ public:
     {
         wifi_status = last_drawn_wifi_status = false;
         mqtt_status = last_drawn_mqtt_status = false;
+        forecast_status = last_drawn_forecast_status = false;
+        forecast_timestamp = -1;
         last_drawn_time = -1;
     }
 
@@ -72,17 +84,29 @@ public:
         this->mqtt_status = mqtt_status;
     }
 
+    void forecastFetched(time_t timestamp)
+    {
+        this->forecast_timestamp = timestamp;
+    }
+
     virtual bool redraw()
     {
         time_t now;
         time(&now);
+
+        forecast_status = forecast_timestamp != -1 &&
+                          now > forecast_timestamp &&
+                          now < forecast_timestamp + settings::forecast::expiry;
+
         if (last_drawn_wifi_status == wifi_status &&
             last_drawn_mqtt_status == mqtt_status &&
+            last_drawn_forecast_status == forecast_status &&
             last_drawn_time == now)
             return false;
 
         last_drawn_wifi_status = wifi_status;
         last_drawn_mqtt_status = mqtt_status;
+        last_drawn_forecast_status = forecast_status;
         last_drawn_time = now;
 
         canvas->clear();
