@@ -4,6 +4,7 @@
 #include "fonts/NotoSans_SemiBold731fpt8b.hpp"
 #include "fonts/NotoSans_SemiBold20pt8b.hpp"
 #include "fonts/NotoSans_SemiBold40pt8b.hpp"
+#include "fonts/NotoSans_Condensed549fpt8b.hpp"
 #include "lang.hpp"
 #include "ca.hpp"
 
@@ -70,7 +71,14 @@ namespace settings
         const unsigned long refresh = 10 * 60;
         const double lat = FORECAST_LAT;
         const double lon = FORECAST_LON;
-        const unsigned long expiry = 24 * 3600;
+        const time_t expiry = 24 * 3600;
+        namespace plot {
+            const int32_t maring = 5;
+            const time_t x_span = 24 * 3600;
+            const time_t x_step = 6 * 3600;
+            const float y_steps[] = {1, 2, 5, 10, 20, 50, 100, 200, 500};
+            const char *const y_step_format = "%.0f";
+        }
     }
     namespace colors
     {
@@ -90,5 +98,6 @@ namespace settings
         const m5gfx::IFont *const temperature = &NotoSans_SemiBold40pt8b;
         const m5gfx::IFont *const humidity = &NotoSans_SemiBold20pt8b;
         const m5gfx::IFont *const pressure = &NotoSans_SemiBold20pt8b;
+        const m5gfx::IFont *const plot = &NotoSans_Condensed549fpt8b;
     }
 }

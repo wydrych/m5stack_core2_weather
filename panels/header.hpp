@@ -5,6 +5,7 @@
 #include "panel.hpp"
 #include "../icons/icons.hpp"
 #include "../lang.hpp"
+#include "../forecast.h"
 #include "../settings.hpp"
 
 class HeaderPanel : public PanelBase
@@ -16,7 +17,6 @@ class HeaderPanel : public PanelBase
     bool forecast_status;
     bool last_drawn_forecast_status;
     time_t last_drawn_time;
-    time_t forecast_timestamp;
 
     void draw_icons()
     {
@@ -84,17 +84,12 @@ public:
         this->mqtt_status = mqtt_status;
     }
 
-    void forecastFetched(time_t timestamp)
-    {
-        this->forecast_timestamp = timestamp;
-    }
-
-    virtual bool redraw()
+    bool redraw()
     {
         time_t now;
         time(&now);
 
-        forecast_status = forecast_timestamp != -1 &&
+        forecast_status = forecast_timestamp != 0 &&
                           now > forecast_timestamp &&
                           now < forecast_timestamp + settings::forecast::expiry;
 

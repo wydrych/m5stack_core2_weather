@@ -11,6 +11,7 @@
 extern bool wifi_status;
 
 forecast_t forecast;
+time_t forecast_timestamp;
 
 template <typename T>
 bool forecast_convert(JsonObject &data, const char *key, forecast_entry_t<T> &target)
@@ -152,7 +153,6 @@ void forecast_loop()
 {
     if (!wifi_status)
         return;
-    static time_t last_fetched;
     static unsigned long last_refresh;
     static unsigned long last_retry;
     unsigned long now = millis();
@@ -169,7 +169,7 @@ void forecast_loop()
         return;
     M5_LOGD("lastest available: %d", latest_available);
 
-    if (last_fetched >= latest_available)
+    if (forecast_timestamp >= latest_available)
     {
         last_refresh = now;
         return;
@@ -192,7 +192,6 @@ void forecast_loop()
     M5_LOGD("new forecast: pcpttl_type_max: %d+%dx%d, [0]: %d", new_forecast.pcpttl_type_max.start, new_forecast.pcpttl_type_max.points.size(), new_forecast.pcpttl_type_max.interval, new_forecast.pcpttl_type_max.points[0]);
     M5_LOGD("new forecast: trpres_point: %d+%dx%d, [0]: %f", new_forecast.trpres_point.start, new_forecast.trpres_point.points.size(), new_forecast.trpres_point.interval, new_forecast.trpres_point.points[0]);
     forecast = new_forecast;
-    last_fetched = latest_available;
+    forecast_timestamp = latest_available;
     last_refresh = now;
-    on_forecast_successfull_fetch(last_fetched);
 }

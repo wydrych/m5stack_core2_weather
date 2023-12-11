@@ -12,6 +12,9 @@
 #include "panels/header.hpp"
 #include "panels/main.hpp"
 #include "panels/forecast.hpp"
+#include "panels/temperature.hpp"
+#include "panels/pressure.hpp"
+#include "panels/precipitation.hpp"
 
 bool wifi_status;
 bool mqtt_status;
@@ -61,9 +64,9 @@ void setup()
 
   headerPanel = new HeaderPanel(displayCanvas, displayWidth, settings::header_height, M5.Display.getColorDepth());
   mainPanel = new MainPanel(displayCanvas, displayWidth, displayHeight - settings::header_height, M5.Display.getColorDepth());
-  temperatureForecastPanel = new ForecastPanel(displayCanvas, displayWidth, displayHeight - settings::header_height, M5.Display.getColorDepth());
-  rainForecastPanel = new ForecastPanel(displayCanvas, displayWidth, displayHeight - settings::header_height, M5.Display.getColorDepth());
-  pressureForecastPanel = new ForecastPanel(displayCanvas, displayWidth, displayHeight - settings::header_height, M5.Display.getColorDepth());
+  temperatureForecastPanel = new TemperatureForecastPanel(displayCanvas, displayWidth, displayHeight - settings::header_height, M5.Display.getColorDepth());
+  rainForecastPanel = new PressureForecastPanel(displayCanvas, displayWidth, displayHeight - settings::header_height, M5.Display.getColorDepth());
+  pressureForecastPanel = new PrecipitationForecastPanel(displayCanvas, displayWidth, displayHeight - settings::header_height, M5.Display.getColorDepth());
 
   mainPanel->setForecastPanels(temperatureForecastPanel, rainForecastPanel, pressureForecastPanel);
 
@@ -194,10 +197,6 @@ void touch_loop()
   M5_LOGI("touch (%d,%d)", t.x, t.y);
   if (t.y >= settings::header_height)
     currentPanel = currentPanel->touch(t.x, t.y - settings::header_height);
-}
-
-void on_forecast_successfull_fetch(time_t timestamp) {
-  headerPanel->forecastFetched(timestamp);
 }
 
 void loop()

@@ -77,7 +77,7 @@ public:
         pressureForecastPanel = pressure;
     }
 
-    virtual bool redraw()
+    bool redraw()
     {
         unsigned long now = millis();
 
@@ -95,7 +95,7 @@ public:
         return true;
     }
 
-    virtual Panel *touch(int16_t x, int16_t y)
+    Panel *touch(int16_t x, int16_t y)
     {
         if (y <= canvas->height() * 2 / 3)
             return temperatureForecastPanel;

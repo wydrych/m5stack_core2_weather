@@ -19,5 +19,6 @@ struct forecast_t
 };
 
 extern forecast_t forecast;
+extern time_t forecast_timestamp;
 
 void on_forecast_successfull_fetch(time_t);
