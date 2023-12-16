@@ -65,8 +65,8 @@ void setup()
   headerPanel = new HeaderPanel(displayCanvas, displayWidth, settings::header_height, M5.Display.getColorDepth());
   mainPanel = new MainPanel(displayCanvas, displayWidth, displayHeight - settings::header_height, M5.Display.getColorDepth());
   temperatureForecastPanel = new TemperatureForecastPanel(displayCanvas, displayWidth, displayHeight - settings::header_height, M5.Display.getColorDepth());
-  rainForecastPanel = new PressureForecastPanel(displayCanvas, displayWidth, displayHeight - settings::header_height, M5.Display.getColorDepth());
-  pressureForecastPanel = new PrecipitationForecastPanel(displayCanvas, displayWidth, displayHeight - settings::header_height, M5.Display.getColorDepth());
+  rainForecastPanel = new PrecipitationForecastPanel(displayCanvas, displayWidth, displayHeight - settings::header_height, M5.Display.getColorDepth());
+  pressureForecastPanel = new PressureForecastPanel(displayCanvas, displayWidth, displayHeight - settings::header_height, M5.Display.getColorDepth());
 
   mainPanel->setForecastPanels(temperatureForecastPanel, rainForecastPanel, pressureForecastPanel);
 

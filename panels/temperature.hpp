@@ -5,21 +5,22 @@
 class TemperatureForecastPanel : public ForecastPanel
 {
 protected:
-    std::pair<time_t, time_t> getXrange()
+    xrange_t getXrange()
     {
-        return std::make_pair(forecast.airtmp_point.start, forecast.airtmp_point.start + settings::forecast::plot::x_span);
+        return {forecast.airtmp_point.start, forecast.airtmp_point.start + settings::forecast::plot::x_span};
+        // return std::make_pair(forecast.airtmp_point.start, forecast.airtmp_point.start + settings::forecast::plot::x_span);
     }
 
-    std::vector<Series> getSeries(std::pair<time_t, time_t> xrange)
+    std::vector<Series> getSeries(xrange_t xrange)
     {
         // TODO
         return std::vector<Series>();
     };
 
-    std::pair<float, float> getYrange(std::vector<Series> &series)
+    yrange_t getYrange(std::vector<Series> &series)
     {
         // TODO
-        return std::make_pair(0, 32);
+        return {0, 32};
     };
 
 public:

@@ -5,20 +5,20 @@
 class PrecipitationForecastPanel : public ForecastPanel
 {
 protected:
-    std::pair<time_t, time_t> getXrange()
+    xrange_t getXrange()
     {
-        return std::make_pair(forecast.pcpttl_aver.start, forecast.pcpttl_aver.start + settings::forecast::plot::x_span);
+        return {forecast.pcpttl_aver.start, forecast.pcpttl_aver.start + settings::forecast::plot::x_span};
     }
 
-    std::vector<Series> getSeries(std::pair<time_t, time_t> xrange)
+    std::vector<Series> getSeries(xrange_t xrange)
     {
         // TODO
         return std::vector<Series>();
     };
-    std::pair<float, float> getYrange(std::vector<Series> &series)
+    yrange_t getYrange(std::vector<Series> &series)
     {
         // TODO
-        return std::make_pair(0, 6);
+        return {0, 6};
     };
 
 public:
