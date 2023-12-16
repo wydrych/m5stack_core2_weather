@@ -5,7 +5,12 @@
 class PrecipitationForecastPanel : public ForecastPanel
 {
 protected:
-    std::vector<Series> getSeries(time_t xmin, time_t ymax)
+    std::pair<time_t, time_t> getXrange()
+    {
+        return std::make_pair(forecast.pcpttl_aver.start, forecast.pcpttl_aver.start + settings::forecast::plot::x_span);
+    }
+
+    std::vector<Series> getSeries(std::pair<time_t, time_t> xrange)
     {
         // TODO
         return std::vector<Series>();
@@ -13,7 +18,7 @@ protected:
     std::pair<float, float> getYrange(std::vector<Series> &series)
     {
         // TODO
-        return std::make_pair(0, 1);
+        return std::make_pair(0, 6);
     };
 
 public:

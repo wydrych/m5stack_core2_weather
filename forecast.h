@@ -10,6 +10,7 @@ struct forecast_entry_t
 
 struct forecast_t
 {
+    time_t timestamp;
     forecast_entry_t<float> airtmp_point;
     forecast_entry_t<float> wchill_point;
     forecast_entry_t<float> pcpttl_aver;
@@ -19,6 +20,5 @@ struct forecast_t
 };
 
 extern forecast_t forecast;
-extern time_t forecast_timestamp;
 
 void on_forecast_successfull_fetch(time_t);

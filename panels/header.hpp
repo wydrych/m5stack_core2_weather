@@ -70,7 +70,7 @@ public:
         wifi_status = last_drawn_wifi_status = false;
         mqtt_status = last_drawn_mqtt_status = false;
         forecast_status = last_drawn_forecast_status = false;
-        forecast_timestamp = -1;
+        forecast.timestamp = -1;
         last_drawn_time = -1;
     }
 
@@ -89,9 +89,9 @@ public:
         time_t now;
         time(&now);
 
-        forecast_status = forecast_timestamp != 0 &&
-                          now > forecast_timestamp &&
-                          now < forecast_timestamp + settings::forecast::expiry;
+        forecast_status = forecast.timestamp != 0 &&
+                          now > forecast.timestamp &&
+                          now <= forecast.timestamp + settings::forecast::expiry;
 
         if (last_drawn_wifi_status == wifi_status &&
             last_drawn_mqtt_status == mqtt_status &&
