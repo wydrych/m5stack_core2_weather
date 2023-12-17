@@ -27,7 +27,7 @@ PubSubClient mqtt_client(wifi_client);
 HeaderPanel *headerPanel;
 MainPanel *mainPanel;
 ForecastPanel *temperatureForecastPanel,
-    *rainForecastPanel,
+    *precipitationForecastPanel,
     *pressureForecastPanel;
 Panel *currentPanel,
     *lastDrawnPlanel;
@@ -65,10 +65,10 @@ void setup()
   headerPanel = new HeaderPanel(displayCanvas, displayWidth, settings::header_height, M5.Display.getColorDepth());
   mainPanel = new MainPanel(displayCanvas, displayWidth, displayHeight - settings::header_height, M5.Display.getColorDepth());
   temperatureForecastPanel = new TemperatureForecastPanel(displayCanvas, displayWidth, displayHeight - settings::header_height, M5.Display.getColorDepth());
-  rainForecastPanel = new PrecipitationForecastPanel(displayCanvas, displayWidth, displayHeight - settings::header_height, M5.Display.getColorDepth());
+  precipitationForecastPanel = new PrecipitationForecastPanel(displayCanvas, displayWidth, displayHeight - settings::header_height, M5.Display.getColorDepth());
   pressureForecastPanel = new PressureForecastPanel(displayCanvas, displayWidth, displayHeight - settings::header_height, M5.Display.getColorDepth());
 
-  mainPanel->setForecastPanels(temperatureForecastPanel, rainForecastPanel, pressureForecastPanel);
+  mainPanel->setForecastPanels(temperatureForecastPanel, precipitationForecastPanel, pressureForecastPanel);
 
   currentPanel = mainPanel;
 

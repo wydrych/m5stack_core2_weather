@@ -10,12 +10,11 @@ protected:
         return {forecast.trpres_point.start, forecast.trpres_point.start + settings::forecast::plot::x_span};
     }
 
-    std::vector<Series> getSeries(xrange_t xrange)
+    void fillSeries(xrange_t xrange, std::vector<std::unique_ptr<Series>> &series)
     {
         // TODO
-        return std::vector<Series>();
     };
-    yrange_t getYrange(std::vector<Series> &series)
+    yrange_t getYrange(std::vector<std::unique_ptr<Series>> const &series)
     {
         // TODO
         return {923, 1014};

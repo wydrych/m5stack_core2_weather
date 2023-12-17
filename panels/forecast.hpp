@@ -82,8 +82,8 @@ private:
         for (float y = first; y <= last; y += ystep)
         {
             ystep_t step;
-            step.value = y;
-            snprintf(step.label, step.label_size, settings::forecast::plot::y_step_format, y);
+            step.value = y + 0.0;
+            snprintf(step.label, step.label_size, settings::forecast::plot::y_step_format, step.value);
             ysteps.push_back(step);
         }
         return ysteps;
@@ -92,8 +92,12 @@ private:
 protected:
     class Series
     {
-    protected:
-        virtual void plot(int32_t x0, int32_t y0, time_t x0val, float y0val, float xscale, float yscale) = 0;
+    public:
+        virtual ~Series() = default;
+
+        virtual void plot(M5Canvas *canvas, int32_t x0, int32_t y0, time_t x0val, float y0val, float xscale, float yscale) const = 0;
+        virtual float getMin() const = 0;
+        virtual float getMax() const = 0;
     };
 
     class LineSeries : public Series
@@ -102,26 +106,81 @@ protected:
         std::vector<point_t> points;
         uint32_t color;
 
-    protected:
-        LineSeries(std::vector<point_t> _points, uint32_t _color)
+        void plotPoint(size_t i, M5Canvas *canvas, int32_t x0, int32_t y0, time_t x0val, float y0val, float xscale, float yscale) const
         {
-            _points = points;
-            _color = color;
+            int32_t x = lround(x0 + xscale * (points[i].t - x0val));
+            int32_t y = lround(y0 + yscale * (points[i].v - y0val));
+            canvas->drawPixel(x, y);
         }
-        void plot(int32_t x0, int32_t y0, time_t x0val, float y0val, float xscale, float yscale)
+        void plotLine(size_t i, size_t j, M5Canvas *canvas, int32_t x0, int32_t y0, time_t x0val, float y0val, float xscale, float yscale) const
         {
-            // TODO
+            int32_t xi = lround(x0 + xscale * (points[i].t - x0val));
+            int32_t yi = lround(y0 + yscale * (points[i].v - y0val));
+            int32_t xj = lround(x0 + xscale * (points[j].t - x0val));
+            int32_t yj = lround(y0 + yscale * (points[j].v - y0val));
+            canvas->drawLine(xi, yi, xj, yj);
+        }
+
+    public:
+        LineSeries(forecast_entry_t<float> const &entry, xrange_t xrange, uint32_t color)
+        {
+            points.reserve((xrange.to - xrange.from) / entry.interval + 1);
+            for (size_t i = 0; i < entry.points.size(); i++)
+            {
+                time_t t = entry.start + i * entry.interval;
+                if (t < xrange.from)
+                    continue;
+                if (t > xrange.to)
+                    break;
+                points.push_back({t, entry.points[i]});
+            }
+            this->color = color;
+        }
+
+        ~LineSeries() = default;
+
+        void plot(M5Canvas *canvas, int32_t x0, int32_t y0, time_t x0val, float y0val, float xscale, float yscale) const
+        {
+            if (points.size() == 0)
+                return;
+            canvas->setColor(color);
+            plotPoint(0, canvas, x0, y0, x0val, y0val, xscale, yscale);
+            for (size_t i = 1; i < points.size(); i++)
+            {
+                plotLine(i - 1, i, canvas, x0, y0, x0val, y0val, xscale, yscale);
+            }
+        }
+
+        float getMin() const
+        {
+            if (points.size() == 0)
+                return NAN;
+            float min = points[0].v;
+            for (size_t i = 1; i < points.size(); i++)
+            {
+                if (points[i].v < min)
+                    min = points[i].v;
+            }
+            return min;
+        }
+
+        float getMax() const
+        {
+            if (points.size() == 0)
+                return NAN;
+            float max = points[0].v;
+            for (size_t i = 1; i < points.size(); i++)
+            {
+                if (points[i].v > max)
+                    max = points[i].v;
+            }
+            return max;
         }
     };
 
     virtual xrange_t getXrange() = 0;
-    virtual std::vector<Series> getSeries(xrange_t xrange) = 0;
-    virtual yrange_t getYrange(std::vector<Series> &series) = 0;
-
-    std::vector<point_t> extractSeriesPoints(forecast_entry_t<float> const &forecast_entry, xrange_t xrange)
-    {
-        return std::vector<point_t>();
-    }
+    virtual void fillSeries(xrange_t xrange, std::vector<std::unique_ptr<Series>> &series) = 0;
+    virtual yrange_t getYrange(std::vector<std::unique_ptr<Series>> const &series) = 0;
 
     ForecastPanel(M5Canvas *parentCanvas, int32_t w, int32_t h, lgfx::v1::color_depth_t depth)
         : Panel(parentCanvas, w, h, depth)
@@ -149,9 +208,10 @@ public:
             return true;
         }
 
+        std::vector<std::unique_ptr<Series>> series;
         xrange_t xrange = getXrange();
         xsteps_t xsteps = getXsteps(xrange);
-        std::vector<Series> series = getSeries(xrange);
+        fillSeries(xrange, series);
         yrange_t yrange = getYrange(series);
         ysteps_t ysteps = getYsteps(yrange);
         int32_t ylabel_width = 0;
@@ -190,6 +250,13 @@ public:
         }
 
         canvas->drawRect(x0, y1, x1 - x0 + 1, y0 - y1 + 1);
+
+        canvas->setClipRect(x0 + 1, y1 + 1, x1 - x0 - 1, y0 - y1 - 1);
+        for (std::unique_ptr<Series> const &s : series)
+        {
+            s->plot(canvas, x0, y0, xrange.from, yrange.from, xscale, yscale);
+        }
+        canvas->clearClipRect();
 
         last_drawn_forecast_timestamp = forecast.timestamp;
         return true;
