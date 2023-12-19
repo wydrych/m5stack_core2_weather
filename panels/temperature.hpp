@@ -12,8 +12,6 @@ protected:
 
     void fillSeries(xrange_t xrange, std::vector<std::unique_ptr<Series>> &series)
     {
-        series.reserve(2);
-
         std::unique_ptr<Series> wchill_series(new LineSeries(forecast.wchill_point, xrange, settings::colors::plot::wchill));
         series.push_back(std::move(wchill_series));
 
@@ -34,8 +32,9 @@ protected:
             if (smax > max)
                 max = smax;
         }
-        min = min * 1.1;
-        max = max * 1.1;
+        float range = max - min;
+        min -= range * 0.1;
+        max += range * 0.1;
         if (min > 0 || min == 0 && max >= 1)
             return {0, max};
         if (max < 0 || max == 0 && min <= -1)

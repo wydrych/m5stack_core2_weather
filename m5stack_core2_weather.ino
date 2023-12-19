@@ -77,9 +77,7 @@ void setup()
   mqtt_client.setServer(settings::mqtt::server, settings::mqtt::port);
   mqtt_client.setCallback(mqtt_callback);
 
-  configTime(0, 0, settings::time::ntpServer);
-  setenv("TZ", settings::time::tz, 1);
-  tzset();
+  configTzTime(settings::time::tz, settings::time::ntpServer);
 }
 
 void redraw()

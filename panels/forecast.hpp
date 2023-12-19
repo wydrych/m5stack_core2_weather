@@ -89,6 +89,30 @@ private:
         return ysteps;
     }
 
+    void plotGrid(xsteps_t &xsteps, ysteps_t &ysteps, int32_t x0, int32_t y0, time_t x0val, float y0val, float xscale, float yscale) const
+    {
+        canvas->setColor(settings::colors::plot::grid);
+        for (xstep_t const &xstep : xsteps)
+        {
+            int32_t x = lround(x0 + xscale * (xstep.value - x0val));
+            for (int32_t y = y0; y > 0; y -= settings::forecast::plot::grid_pattern[0] + settings::forecast::plot::grid_pattern[1])
+            {
+                canvas->drawFastVLine(x, y, -settings::forecast::plot::grid_pattern[0]);
+            }
+        }
+        for (ystep_t const &ystep : ysteps)
+        {
+            int32_t y = lround(y0 + yscale * (ystep.value - y0val));
+            if (ystep.value == 0)
+                canvas->drawFastHLine(x0, y, canvas->width() - x0);
+            else
+                for (int32_t x = x0 + 1; x < canvas->width(); x += settings::forecast::plot::grid_pattern[0] + settings::forecast::plot::grid_pattern[1])
+                {
+                    canvas->drawFastHLine(x, y, settings::forecast::plot::grid_pattern[0]);
+                }
+        }
+    }
+
 protected:
     class Series
     {
@@ -233,14 +257,6 @@ public:
         canvas->clear();
         canvas->setColor(settings::colors::plot::border);
 
-        canvas->setTextDatum(m5gfx::textdatum::baseline_right);
-        for (ystep_t ystep : ysteps)
-        {
-            int32_t y = lround(y0 + yscale * (ystep.value - yrange.from));
-            canvas->drawString(ystep.label, x0 - 3, y + settings::forecast::plot::label_height / 2 - 1);
-            canvas->drawLine(x0 - 2, y, x0, y);
-        }
-
         canvas->setTextDatum(m5gfx::textdatum::baseline_center);
         for (xstep_t xstep : xsteps)
         {
@@ -249,13 +265,25 @@ public:
             canvas->drawLine(x, y0, x, y0 + 2);
         }
 
+        canvas->setTextDatum(m5gfx::textdatum::baseline_right);
+        for (ystep_t ystep : ysteps)
+        {
+            int32_t y = lround(y0 + yscale * (ystep.value - yrange.from));
+            canvas->drawString(ystep.label, x0 - 3, y + settings::forecast::plot::label_height / 2 - 1);
+            canvas->drawLine(x0 - 2, y, x0, y);
+        }
+
         canvas->drawRect(x0, y1, x1 - x0 + 1, y0 - y1 + 1);
 
         canvas->setClipRect(x0 + 1, y1 + 1, x1 - x0 - 1, y0 - y1 - 1);
+
+        plotGrid(xsteps, ysteps, x0, y0, xrange.from, yrange.from, xscale, yscale);
+
         for (std::unique_ptr<Series> const &s : series)
         {
             s->plot(canvas, x0, y0, xrange.from, yrange.from, xscale, yscale);
         }
+
         canvas->clearClipRect();
 
         last_drawn_forecast_timestamp = forecast.timestamp;
