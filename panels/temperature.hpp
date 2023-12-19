@@ -12,10 +12,10 @@ protected:
 
     void fillSeries(xrange_t xrange, std::vector<std::unique_ptr<Series>> &series)
     {
-        std::unique_ptr<Series> wchill_series(new LineSeries(forecast.wchill_point, xrange, settings::colors::plot::wchill));
+        std::unique_ptr<Series> wchill_series(new LineSeries(forecast.wchill_point, xrange, true, settings::colors::plot::wchill));
         series.push_back(std::move(wchill_series));
 
-        std::unique_ptr<Series> airtmp_series(new LineSeries(forecast.airtmp_point, xrange, settings::colors::plot::airtmp));
+        std::unique_ptr<Series> airtmp_series(new LineSeries(forecast.airtmp_point, xrange, true, settings::colors::plot::airtmp));
         series.push_back(std::move(airtmp_series));
     };
 

@@ -128,13 +128,17 @@ protected:
     {
     private:
         std::vector<point_t> points;
+        bool thick;
         uint32_t color;
 
         void plotPoint(size_t i, M5Canvas *canvas, int32_t x0, int32_t y0, time_t x0val, float y0val, float xscale, float yscale) const
         {
             int32_t x = lround(x0 + xscale * (points[i].t - x0val));
             int32_t y = lround(y0 + yscale * (points[i].v - y0val));
-            canvas->drawPixel(x, y);
+            if (thick)
+                canvas->fillRect(x - 1, y - 1, 3, 3);
+            else
+                canvas->drawPixel(x, y);
         }
         void plotLine(size_t i, size_t j, M5Canvas *canvas, int32_t x0, int32_t y0, time_t x0val, float y0val, float xscale, float yscale) const
         {
@@ -143,10 +147,21 @@ protected:
             int32_t xj = lround(x0 + xscale * (points[j].t - x0val));
             int32_t yj = lround(y0 + yscale * (points[j].v - y0val));
             canvas->drawLine(xi, yi, xj, yj);
+            if (thick)
+                if (abs(yj - yi) > abs(xj - xi)) // steep
+                {
+                    canvas->drawLine(xi - 1, yi, xj - 1, yj);
+                    canvas->drawLine(xi + 1, yi, xj + 1, yj);
+                }
+                else
+                {
+                    canvas->drawLine(xi, yi - 1, xj, yj - 1);
+                    canvas->drawLine(xi, yi + 1, xj, yj + 1);
+                }
         }
 
     public:
-        LineSeries(forecast_entry_t<float> const &entry, xrange_t xrange, uint32_t color)
+        LineSeries(forecast_entry_t<float> const &entry, xrange_t xrange, bool thick, uint32_t color)
         {
             points.reserve((xrange.to - xrange.from) / entry.interval + 1);
             for (size_t i = 0; i < entry.points.size(); i++)
@@ -158,6 +173,7 @@ protected:
                     break;
                 points.push_back({t, entry.points[i]});
             }
+            this->thick = thick;
             this->color = color;
         }
 
@@ -172,6 +188,7 @@ protected:
             for (size_t i = 1; i < points.size(); i++)
             {
                 plotLine(i - 1, i, canvas, x0, y0, x0val, y0val, xscale, yscale);
+                plotPoint(i, canvas, x0, y0, x0val, y0val, xscale, yscale);
             }
         }
 
