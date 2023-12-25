@@ -4,6 +4,15 @@
 #include "main.hpp"
 #include "../forecast.h"
 
+inline float unless_nan(const float &(*f)(const float &, const float &), const float &a, const float &b)
+{
+    if (isnanf(a))
+        return b;
+    if (isnanf(b))
+        return a;
+    return f(a, b);
+}
+
 class ForecastPanel : public Panel
 {
 private:
@@ -31,89 +40,6 @@ protected:
     typedef range_t<time_t> xrange_t;
     typedef range_t<float> yrange_t;
 
-    struct point_t
-    {
-        time_t t;
-        float v;
-    };
-
-private:
-    time_t last_drawn_forecast_timestamp;
-
-    xsteps_t getXsteps(xrange_t xrange)
-    {
-        struct tm timeinfo;
-        localtime_r(&xrange.from, &timeinfo);
-        timeinfo.tm_hour = timeinfo.tm_sec = timeinfo.tm_min = 0;
-        time_t start_of_day = mktime(&timeinfo);
-        xsteps_t xsteps;
-        for (time_t x = start_of_day; x <= xrange.to; x += settings::forecast::plot::x_step)
-        {
-            if (x < xrange.from)
-                continue;
-            xstep_t step;
-            step.value = x;
-            localtime_r(&x, &timeinfo);
-            strftime(step.label, step.label_size, settings::forecast::plot::x_step_format, &timeinfo);
-            xsteps.push_back(step);
-        }
-        return xsteps;
-    }
-
-    float getYstep(yrange_t yrange)
-    {
-        float yspan = yrange.to - yrange.from;
-        float ystepmax = yspan / 4;
-        float ystep = settings::forecast::plot::y_steps[0];
-        for (float s : settings::forecast::plot::y_steps)
-            if (ystep <= ystepmax)
-                ystep = s;
-            else
-                break;
-        return ystep;
-    }
-
-    ysteps_t getYsteps(yrange_t yrange)
-    {
-        float ystep = getYstep(yrange);
-        float first = ceilf(yrange.from / ystep) * ystep;
-        float last = floor(yrange.to / ystep) * ystep;
-        ysteps_t ysteps;
-        for (float y = first; y <= last; y += ystep)
-        {
-            ystep_t step;
-            step.value = y + 0.0;
-            snprintf(step.label, step.label_size, settings::forecast::plot::y_step_format, step.value);
-            ysteps.push_back(step);
-        }
-        return ysteps;
-    }
-
-    void plotGrid(xsteps_t &xsteps, ysteps_t &ysteps, int32_t x0, int32_t y0, time_t x0val, float y0val, float xscale, float yscale) const
-    {
-        canvas->setColor(settings::colors::plot::grid);
-        for (xstep_t const &xstep : xsteps)
-        {
-            int32_t x = lround(x0 + xscale * (xstep.value - x0val));
-            for (int32_t y = y0; y > 0; y -= settings::forecast::plot::grid_pattern[0] + settings::forecast::plot::grid_pattern[1])
-            {
-                canvas->drawFastVLine(x, y, -settings::forecast::plot::grid_pattern[0]);
-            }
-        }
-        for (ystep_t const &ystep : ysteps)
-        {
-            int32_t y = lround(y0 + yscale * (ystep.value - y0val));
-            if (ystep.value == 0)
-                canvas->drawFastHLine(x0, y, canvas->width() - x0);
-            else
-                for (int32_t x = x0 + 1; x < canvas->width(); x += settings::forecast::plot::grid_pattern[0] + settings::forecast::plot::grid_pattern[1])
-                {
-                    canvas->drawFastHLine(x, y, settings::forecast::plot::grid_pattern[0]);
-                }
-        }
-    }
-
-protected:
     class Series
     {
     public:
@@ -127,6 +53,12 @@ protected:
     class LineSeries : public Series
     {
     private:
+        struct point_t
+        {
+            time_t t;
+            float v;
+        };
+
         std::vector<point_t> points;
         bool thick;
         uint32_t color;
@@ -219,9 +151,135 @@ protected:
         }
     };
 
-    virtual xrange_t getXrange() = 0;
+private:
+    time_t last_drawn_forecast_timestamp;
+
+    static xsteps_t getXsteps(xrange_t xrange)
+    {
+        struct tm timeinfo;
+        localtime_r(&xrange.from, &timeinfo);
+        timeinfo.tm_hour = timeinfo.tm_sec = timeinfo.tm_min = 0;
+        time_t start_of_day = mktime(&timeinfo);
+        xsteps_t xsteps;
+        for (time_t x = start_of_day; x <= xrange.to; x += settings::forecast::plot::x_step)
+        {
+            if (x < xrange.from)
+                continue;
+            xstep_t step;
+            step.value = x;
+            localtime_r(&x, &timeinfo);
+            strftime(step.label, step.label_size, settings::forecast::plot::x_step_format, &timeinfo);
+            xsteps.push_back(step);
+        }
+        return xsteps;
+    }
+
+    yrange_t getYrange(std::vector<std::unique_ptr<Series>> const &series) const
+    {
+        yrange_t soft = getSoftYrange();
+        yrange_t hard = getHardYrange();
+        bool has_hard_min = !isnanf(hard.from);
+        bool has_hard_max = !isnanf(hard.to);
+
+        if (has_hard_min && has_hard_max)
+            return hard;
+
+        float data_min = std::numeric_limits<float>::infinity();
+        float data_max = -std::numeric_limits<float>::infinity();
+        for (std::unique_ptr<Series> const &s : series)
+        {
+            if (!has_hard_min)
+            {
+                float smin = s->getMin();
+                if (smin < data_min)
+                    data_min = smin;
+            }
+            if (!has_hard_max)
+            {
+                float smax = s->getMax();
+                if (smax > data_max)
+                    data_max = smax;
+            }
+        }
+
+        const float M = 0.1;
+
+        if (has_hard_min)
+            return {hard.from,
+                    std::max(hard.from + 1 + M,
+                             unless_nan(std::max, soft.to, data_max + M * (data_max - hard.from) / (1 - M)))};
+        if (has_hard_max)
+            return {std::min(hard.to - 1 - M,
+                             unless_nan(std::min, soft.from, data_min - M * (hard.to - data_min) / (1 - M))),
+                    hard.to};
+
+        float margin = std::max(
+            M * (data_max - unless_nan(std::min, soft.from, data_min - M * (data_max - data_min) / (1 - 2 * M))) / (1 - M),
+            M * (unless_nan(std::max, soft.to, data_max + M * (data_max - data_min) / (1 - 2 * M)) - data_min) / (1 - M));
+
+        float min = unless_nan(std::min, soft.from, data_min - margin);
+        float max = unless_nan(std::max, soft.to, data_max + margin);
+
+        if (max - min < 2 * (1 + M))
+            return {(min + max) / 2 - 1 - M, (min + max) / 2 + 1 + M};
+
+        return {min, max};
+    };
+
+    static float getYstep(yrange_t yrange)
+    {
+        float yspan = yrange.to - yrange.from;
+        float ystepmax = yspan / 4;
+        float ystep = settings::forecast::plot::y_steps[0];
+        for (float s : settings::forecast::plot::y_steps)
+            if (ystep <= ystepmax)
+                ystep = s;
+            else
+                break;
+        return ystep;
+    }
+
+    static ysteps_t getYsteps(yrange_t yrange)
+    {
+        float ystep = getYstep(yrange);
+        float first = ceilf(yrange.from / ystep) * ystep;
+        float last = floor(yrange.to / ystep) * ystep;
+        ysteps_t ysteps;
+        for (float y = first; y <= last; y += ystep)
+        {
+            ystep_t step;
+            step.value = y + 0.0;
+            snprintf(step.label, step.label_size, settings::forecast::plot::y_step_format, step.value);
+            ysteps.push_back(step);
+        }
+        return ysteps;
+    }
+
+    void plotGrid(xsteps_t &xsteps, ysteps_t &ysteps, int32_t x0, int32_t y0, time_t x0val, float y0val, float xscale, float yscale) const
+    {
+        canvas->setColor(settings::colors::plot::grid);
+        for (xstep_t const &xstep : xsteps)
+        {
+            int32_t x = lround(x0 + xscale * (xstep.value - x0val));
+            for (int32_t y = y0; y > 0; y -= settings::forecast::plot::grid_pattern[0] + settings::forecast::plot::grid_pattern[1])
+                canvas->drawFastVLine(x, y, -settings::forecast::plot::grid_pattern[0]);
+        }
+        for (ystep_t const &ystep : ysteps)
+        {
+            int32_t y = lround(y0 + yscale * (ystep.value - y0val));
+            if (ystep.value == 0)
+                canvas->drawFastHLine(x0, y, canvas->width() - x0);
+            else
+                for (int32_t x = x0 + 1; x < canvas->width(); x += settings::forecast::plot::grid_pattern[0] + settings::forecast::plot::grid_pattern[1])
+                    canvas->drawFastHLine(x, y, settings::forecast::plot::grid_pattern[0]);
+        }
+    }
+
+protected:
+    virtual xrange_t getXrange() const = 0;
+    virtual yrange_t getSoftYrange() const = 0;
+    virtual yrange_t getHardYrange() const = 0;
     virtual void fillSeries(xrange_t xrange, std::vector<std::unique_ptr<Series>> &series) = 0;
-    virtual yrange_t getYrange(std::vector<std::unique_ptr<Series>> const &series) = 0;
 
     ForecastPanel(M5Canvas *parentCanvas, int32_t w, int32_t h, lgfx::v1::color_depth_t depth)
         : Panel(parentCanvas, w, h, depth)
@@ -297,9 +355,7 @@ public:
         plotGrid(xsteps, ysteps, x0, y0, xrange.from, yrange.from, xscale, yscale);
 
         for (std::unique_ptr<Series> const &s : series)
-        {
             s->plot(canvas, x0, y0, xrange.from, yrange.from, xscale, yscale);
-        }
 
         canvas->clearClipRect();
 

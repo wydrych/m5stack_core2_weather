@@ -5,7 +5,7 @@
 class PressureForecastPanel : public ForecastPanel
 {
 protected:
-    xrange_t getXrange()
+    xrange_t getXrange() const
     {
         return {forecast.trpres_point.start, forecast.trpres_point.start + settings::forecast::plot::x_span};
     }
@@ -13,12 +13,17 @@ protected:
     void fillSeries(xrange_t xrange, std::vector<std::unique_ptr<Series>> &series)
     {
         // TODO
-    };
-    yrange_t getYrange(std::vector<std::unique_ptr<Series>> const &series)
+    }
+
+    yrange_t getSoftYrange() const
     {
-        // TODO
-        return {923, 1014};
-    };
+        return {1013.25, 1013.25};
+    }
+
+    yrange_t getHardYrange() const
+    {
+        return {NAN, NAN};
+    }
 
 public:
     PressureForecastPanel(M5Canvas *parentCanvas, int32_t w, int32_t h, lgfx::v1::color_depth_t depth)
