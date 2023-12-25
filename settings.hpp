@@ -33,6 +33,9 @@
 #ifndef FORECAST_LON
 #define FORECAST_LON NAN
 #endif
+#ifndef ALTITUDE
+#define ALTITUDE 0
+#endif
 #ifndef TZ
 #define TZ UTC
 #endif
@@ -59,7 +62,7 @@ namespace settings
     {
         const char *const server = MQTT_SERVER;
         const uint16_t port = MQTT_PORT;
-        const double reconnect = 3.0;
+        const float reconnect = 3.0;
         const char *const topic = MQTT_TOPIC;
     }
     namespace forecast
@@ -69,8 +72,9 @@ namespace settings
         const char *const model = "um4_60";
         const unsigned long retry = 10;
         const unsigned long refresh = 10 * 60;
-        const double lat = FORECAST_LAT;
-        const double lon = FORECAST_LON;
+        const float lat = FORECAST_LAT;
+        const float lon = FORECAST_LON;
+        const float alt = ALTITUDE;
         const time_t expiry = 24 * 3600;
         namespace plot
         {
@@ -101,6 +105,7 @@ namespace settings
             const uint32_t grid = m5gfx::convert_to_rgb888(0x808080u);
             const uint32_t airtmp = m5gfx::convert_to_rgb888(0xff0000u);
             const uint32_t wchill = m5gfx::convert_to_rgb888(0x0000ffu);
+            const uint32_t trpres = m5gfx::convert_to_rgb888(0x000000u);
         }
     }
     namespace fonts

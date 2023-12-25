@@ -94,6 +94,8 @@ protected:
 
     public:
         LineSeries(forecast_entry_t<float> const &entry, xrange_t xrange, bool thick, uint32_t color)
+            : LineSeries(entry, 1, xrange, thick, color) {}
+        LineSeries(forecast_entry_t<float> const &entry, float scale, xrange_t xrange, bool thick, uint32_t color)
         {
             points.reserve((xrange.to - xrange.from) / entry.interval + 1);
             for (size_t i = 0; i < entry.points.size(); i++)
@@ -103,7 +105,7 @@ protected:
                     continue;
                 if (t > xrange.to)
                     break;
-                points.push_back({t, entry.points[i]});
+                points.push_back({t, entry.points[i] * scale});
             }
             this->thick = thick;
             this->color = color;
