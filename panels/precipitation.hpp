@@ -12,7 +12,11 @@ protected:
 
     void fillSeries(xrange_t xrange, std::vector<std::unique_ptr<Series>> &series)
     {
-        // TODO
+        std::unique_ptr<Series> pcpttl_aver_series(new BarSeries(forecast.pcpttl_aver, xrange, true, settings::colors::plot::pcpttl));
+        series.push_back(std::move(pcpttl_aver_series));
+
+        std::unique_ptr<Series> pcpttl_max_series(new BarSeries(forecast.pcpttl_max, xrange, false, settings::colors::plot::pcpttl));
+        series.push_back(std::move(pcpttl_max_series));
     }
 
     yrange_t getSoftYrange() const

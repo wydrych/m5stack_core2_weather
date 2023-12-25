@@ -106,6 +106,7 @@ namespace settings
             const uint32_t airtmp = m5gfx::convert_to_rgb888(0xff0000u);
             const uint32_t wchill = m5gfx::convert_to_rgb888(0x0000ffu);
             const uint32_t grdtmp = m5gfx::convert_to_rgb888(0xa52a2au);
+            const uint32_t pcpttl = m5gfx::convert_to_rgb888(0x00aa00u);
             const uint32_t trpres = m5gfx::convert_to_rgb888(0x000000u);
         }
     }

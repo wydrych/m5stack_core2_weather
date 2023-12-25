@@ -163,14 +163,18 @@ protected:
         };
 
         std::vector<point_t> points;
-        bool thick;
+        time_t thickness;
         uint32_t color;
 
     public:
+        BarSeries(forecast_entry_t<float> const &entry, xrange_t xrange, bool thick, uint32_t color)
+            : BarSeries(entry, 1, xrange, thick, color) {}
+        BarSeries(forecast_entry_t<float> const &entry, float scale, xrange_t xrange, bool thick, uint32_t color)
+            : BarSeries({entry.start, entry.interval, std::vector<float>(entry.points.size())}, entry, scale, xrange, thick, color) {}
         BarSeries(forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, xrange_t xrange, bool thick, uint32_t color)
             : BarSeries(from_entry, to_entry, 1, xrange, thick, color) {}
         BarSeries(forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, float scale, xrange_t xrange, bool thick, uint32_t color)
-            : points(), thick(thick), color(color)
+            : points(), thickness(thick ? to_entry.interval : 0), color(color)
         {
             if (from_entry.start != to_entry.start ||
                 from_entry.interval != to_entry.interval ||
@@ -201,15 +205,21 @@ protected:
             if (points.size() == 0)
                 return;
             canvas->setColor(color);
-            for (size_t i = 1; i < points.size(); i++)
+            for (size_t i = 0; i < points.size(); i++)
             {
-                int32_t x = lround(x0 + xscale * (points[i].t - x0val));
                 int32_t y1 = lround(y0 + yscale * (points[i].from - y0val));
                 int32_t y2 = lround(y0 + yscale * (points[i].to - y0val));
-                if (thick)
-                    ; // TODO
+                if (thickness)
+                {
+                    int32_t x1 = lround(x0 + xscale * (points[i].t - thickness / 2 - x0val));
+                    int32_t x2 = lround(x0 + xscale * (points[i].t + thickness / 2 - x0val));
+                    canvas->fillRect(x1, y2, x2 - x1, y1 - y2 + 1);
+                }
                 else
+                {
+                    int32_t x = lround(x0 + xscale * (points[i].t - x0val));
                     canvas->drawLine(x, y1, x, y2);
+                }
             }
         }
 
