@@ -96,6 +96,7 @@ protected:
         LineSeries(forecast_entry_t<float> const &entry, xrange_t xrange, bool thick, uint32_t color)
             : LineSeries(entry, 1, xrange, thick, color) {}
         LineSeries(forecast_entry_t<float> const &entry, float scale, xrange_t xrange, bool thick, uint32_t color)
+            : points(), thick(thick), color(color)
         {
             points.reserve((xrange.to - xrange.from) / entry.interval + 1);
             for (size_t i = 0; i < entry.points.size(); i++)
@@ -107,8 +108,6 @@ protected:
                     break;
                 points.push_back({t, entry.points[i] * scale});
             }
-            this->thick = thick;
-            this->color = color;
         }
 
         ~LineSeries() = default;
@@ -148,6 +147,94 @@ protected:
             {
                 if (points[i].v > max)
                     max = points[i].v;
+            }
+            return max;
+        }
+    };
+
+    class BarSeries : public Series
+    {
+    private:
+        struct point_t
+        {
+            time_t t;
+            float from;
+            float to;
+        };
+
+        std::vector<point_t> points;
+        bool thick;
+        uint32_t color;
+
+    public:
+        BarSeries(forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, xrange_t xrange, bool thick, uint32_t color)
+            : BarSeries(from_entry, to_entry, 1, xrange, thick, color) {}
+        BarSeries(forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, float scale, xrange_t xrange, bool thick, uint32_t color)
+            : points(), thick(thick), color(color)
+        {
+            if (from_entry.start != to_entry.start ||
+                from_entry.interval != to_entry.interval ||
+                from_entry.points.size() != to_entry.points.size())
+            {
+                M5_LOGE("contents of from_entry and to_entry do not match");
+                return;
+            }
+
+            points.reserve((xrange.to - xrange.from) / to_entry.interval + 1);
+            for (size_t i = 0; i < to_entry.points.size(); i++)
+            {
+                time_t t = to_entry.start + i * to_entry.interval;
+                if (t < xrange.from)
+                    continue;
+                if (t > xrange.to)
+                    break;
+                points.push_back({t,
+                                  from_entry.points[i] * scale,
+                                  to_entry.points[i] * scale});
+            }
+        }
+
+        ~BarSeries() = default;
+
+        void plot(M5Canvas *canvas, int32_t x0, int32_t y0, time_t x0val, float y0val, float xscale, float yscale) const
+        {
+            if (points.size() == 0)
+                return;
+            canvas->setColor(color);
+            for (size_t i = 1; i < points.size(); i++)
+            {
+                int32_t x = lround(x0 + xscale * (points[i].t - x0val));
+                int32_t y1 = lround(y0 + yscale * (points[i].from - y0val));
+                int32_t y2 = lround(y0 + yscale * (points[i].to - y0val));
+                if (thick)
+                    ; // TODO
+                else
+                    canvas->drawLine(x, y1, x, y2);
+            }
+        }
+
+        float getMin() const
+        {
+            if (points.size() == 0)
+                return NAN;
+            float min = points[0].from;
+            for (size_t i = 1; i < points.size(); i++)
+            {
+                if (points[i].from < min)
+                    min = points[i].from;
+            }
+            return min;
+        }
+
+        float getMax() const
+        {
+            if (points.size() == 0)
+                return NAN;
+            float max = points[0].to;
+            for (size_t i = 1; i < points.size(); i++)
+            {
+                if (points[i].to > max)
+                    max = points[i].to;
             }
             return max;
         }

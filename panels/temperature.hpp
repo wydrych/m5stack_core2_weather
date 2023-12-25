@@ -22,6 +22,9 @@ protected:
 
     void fillSeries(xrange_t xrange, std::vector<std::unique_ptr<Series>> &series)
     {
+        std::unique_ptr<Series> grdtmp_series(new BarSeries(forecast.grdtmp_min, forecast.grdtmp_max, xrange, false, settings::colors::plot::grdtmp));
+        series.push_back(std::move(grdtmp_series));
+
         std::unique_ptr<Series> wchill_series(new LineSeries(forecast.wchill_point, xrange, true, settings::colors::plot::wchill));
         series.push_back(std::move(wchill_series));
 

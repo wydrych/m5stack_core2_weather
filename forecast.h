@@ -13,6 +13,8 @@ struct forecast_t
     time_t timestamp;
     forecast_entry_t<float> airtmp_point;
     forecast_entry_t<float> wchill_point;
+    forecast_entry_t<float> grdtmp_min;
+    forecast_entry_t<float> grdtmp_max;
     forecast_entry_t<float> pcpttl_aver;
     forecast_entry_t<float> pcpttl_max;
     forecast_entry_t<uint8_t> pcpttl_type_max;

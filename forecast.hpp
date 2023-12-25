@@ -142,6 +142,8 @@ bool forecast_fetch(time_t timestamp, forecast_t &target)
 
     return forecast_convert(data, "airtmp_point", target.airtmp_point) &&
            forecast_convert(data, "wchill_point", target.wchill_point) &&
+           forecast_convert(data, "grdtmp_min", target.grdtmp_min) &&
+           forecast_convert(data, "grdtmp_max", target.grdtmp_max) &&
            forecast_convert(data, "pcpttl_aver", target.pcpttl_aver) &&
            forecast_convert(data, "pcpttl_max", target.pcpttl_max) &&
            forecast_convert(data, "pcpttl_type_max", target.pcpttl_type_max) &&
@@ -187,6 +189,8 @@ void forecast_loop()
     M5_LOGI("new forecast fetched successfully", latest_available);
     M5_LOGD("new forecast: airtmp_point: %d+%dx%d, [0]: %f", new_forecast.airtmp_point.start, new_forecast.airtmp_point.points.size(), new_forecast.airtmp_point.interval, new_forecast.airtmp_point.points[0]);
     M5_LOGD("new forecast: wchill_point: %d+%dx%d, [0]: %f", new_forecast.wchill_point.start, new_forecast.wchill_point.points.size(), new_forecast.wchill_point.interval, new_forecast.wchill_point.points[0]);
+    M5_LOGD("new forecast: grdtmp_min: %d+%dx%d, [0]: %f", new_forecast.grdtmp_min.start, new_forecast.grdtmp_min.points.size(), new_forecast.grdtmp_min.interval, new_forecast.grdtmp_min.points[0]);
+    M5_LOGD("new forecast: grdtmp_max: %d+%dx%d, [0]: %f", new_forecast.grdtmp_max.start, new_forecast.grdtmp_max.points.size(), new_forecast.grdtmp_max.interval, new_forecast.grdtmp_max.points[0]);
     M5_LOGD("new forecast: pcpttl_aver: %d+%dx%d, [0]: %f", new_forecast.pcpttl_aver.start, new_forecast.pcpttl_aver.points.size(), new_forecast.pcpttl_aver.interval, new_forecast.pcpttl_aver.points[0]);
     M5_LOGD("new forecast: pcpttl_max: %d+%dx%d, [0]: %f", new_forecast.pcpttl_max.start, new_forecast.pcpttl_max.points.size(), new_forecast.pcpttl_max.interval, new_forecast.pcpttl_max.points[0]);
     M5_LOGD("new forecast: pcpttl_type_max: %d+%dx%d, [0]: %d", new_forecast.pcpttl_type_max.start, new_forecast.pcpttl_type_max.points.size(), new_forecast.pcpttl_type_max.interval, new_forecast.pcpttl_type_max.points[0]);
