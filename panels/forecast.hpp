@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sunset.h>
+
 #include "panel.hpp"
 #include "main.hpp"
 #include "../forecast.h"
@@ -271,9 +273,9 @@ private:
         struct tm timeinfo;
         localtime_r(&xrange.from, &timeinfo);
         timeinfo.tm_hour = timeinfo.tm_sec = timeinfo.tm_min = 0;
-        time_t start_of_day = mktime(&timeinfo);
+        time_t start_of_today = mktime(&timeinfo);
         xsteps_t xsteps;
-        for (time_t x = start_of_day; x <= xrange.to; x += settings::forecast::plot::x_step)
+        for (time_t x = start_of_today; x <= xrange.to; x += settings::forecast::plot::x_step)
         {
             if (x < xrange.from)
                 continue;
@@ -367,7 +369,40 @@ private:
         return ysteps;
     }
 
-    void plotGrid(xsteps_t &xsteps, ysteps_t &ysteps, int32_t x0, int32_t y0, time_t x0val, float y0val, float xscale, float yscale) const
+    void plotNights(xrange_t xrange, int32_t x0, float xscale)
+    {
+        struct tm timeinfo;
+        gmtime_r(&xrange.from, &timeinfo);
+        float tzoffset = (xrange.from - mktime(&timeinfo)) / 3600.0;
+
+        SunSet sun;
+        sun.setPosition(settings::forecast::lat, settings::forecast::lon, tzoffset);
+
+        localtime_r(&xrange.from, &timeinfo);
+        timeinfo.tm_hour = timeinfo.tm_sec = timeinfo.tm_min = 0;
+        time_t start_of_today = mktime(&timeinfo);
+
+        for (time_t t = start_of_today - 24 * 3600; t < xrange.to; /* noop */)
+        {
+            localtime_r(&t, &timeinfo);
+            sun.setCurrentDate(timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday);
+            time_t sunset = t + lround(sun.calcSunset() * 60);
+            M5_LOGD("%d-%d-%d sunset: %d", timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday, sunset);
+
+            t += 24 * 3600;
+            localtime_r(&t, &timeinfo);
+            sun.setCurrentDate(timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday);
+            time_t sunrise = t + lround(sun.calcSunrise() * 60);
+            M5_LOGD("%d-%d-%d sunrise: %d", timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday, sunrise);
+
+            int32_t sunset_x = lround(x0 + xscale * (sunset - xrange.from));
+            int32_t sunrise_x = lround(x0 + xscale * (sunrise - xrange.from));
+            canvas->setColor(settings::colors::plot::night);
+            canvas->fillRect(sunset_x, 0, sunrise_x - sunset_x, canvas->height());
+        }
+    }
+
+    void plotGrid(xsteps_t &xsteps, ysteps_t &ysteps, int32_t x0, int32_t y0, time_t x0val, float y0val, float xscale, float yscale)
     {
         canvas->setColor(settings::colors::plot::grid);
         for (xstep_t const &xstep : xsteps)
@@ -464,6 +499,7 @@ public:
 
         canvas->setClipRect(x0 + 1, y1 + 1, x1 - x0 - 1, y0 - y1 - 1);
 
+        plotNights(xrange, x0, xscale);
         plotGrid(xsteps, ysteps, x0, y0, xrange.from, yrange.from, xscale, yscale);
 
         for (std::unique_ptr<Series> const &s : series)

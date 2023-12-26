@@ -102,6 +102,7 @@ namespace settings
         namespace plot
         {
             const uint32_t border = m5gfx::convert_to_rgb888(TFT_BLACK);
+            const uint32_t night = m5gfx::convert_to_rgb888(0xd8d8d8u);
             const uint32_t grid = m5gfx::convert_to_rgb888(0x808080u);
             const uint32_t airtmp = m5gfx::convert_to_rgb888(0xff0000u);
             const uint32_t wchill = m5gfx::convert_to_rgb888(0x0000ffu);
