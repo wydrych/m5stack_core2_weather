@@ -164,17 +164,30 @@ protected:
 
         std::vector<point_t> points;
         time_t thickness;
-        uint32_t color;
+        uint32_t color; // used unless colorf == nullptr
+        uint32_t (*colorf)(time_t const &);
 
     public:
-        BarSeries(forecast_entry_t<float> const &entry, xrange_t xrange, bool thick, uint32_t color)
-            : BarSeries(entry, 1, xrange, thick, color) {}
-        BarSeries(forecast_entry_t<float> const &entry, float scale, xrange_t xrange, bool thick, uint32_t color)
-            : BarSeries({entry.start, entry.interval, std::vector<float>(entry.points.size())}, entry, scale, xrange, thick, color) {}
-        BarSeries(forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, xrange_t xrange, bool thick, uint32_t color)
-            : BarSeries(from_entry, to_entry, 1, xrange, thick, color) {}
-        BarSeries(forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, float scale, xrange_t xrange, bool thick, uint32_t color)
-            : points(), thickness(thick ? to_entry.interval : 0), color(color)
+        BarSeries(forecast_entry_t<float> const &entry, xrange_t xrange, bool thick, uint32_t (*colorf)(time_t const &))
+            : BarSeries(entry, xrange, thick, 0, colorf) {}
+
+        BarSeries(forecast_entry_t<float> const &entry, xrange_t xrange, bool thick, uint32_t color, uint32_t (*colorf)(time_t const &) = nullptr)
+            : BarSeries(entry, 1, xrange, thick, color, colorf) {}
+
+        BarSeries(forecast_entry_t<float> const &entry, float scale, xrange_t xrange, bool thick, uint32_t (*colorf)(time_t const &))
+            : BarSeries(entry, scale, xrange, thick, 0, colorf) {}
+
+        BarSeries(forecast_entry_t<float> const &entry, float scale, xrange_t xrange, bool thick, uint32_t color, uint32_t (*colorf)(time_t const &) = nullptr)
+            : BarSeries({entry.start, entry.interval, std::vector<float>(entry.points.size())}, entry, scale, xrange, thick, color, colorf) {}
+
+        BarSeries(forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, xrange_t xrange, bool thick, uint32_t (*colorf)(time_t const &))
+            : BarSeries(from_entry, to_entry, xrange, thick, 0, colorf) {}
+
+        BarSeries(forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, xrange_t xrange, bool thick, uint32_t color, uint32_t (*colorf)(time_t const &) = nullptr)
+            : BarSeries(from_entry, to_entry, 1, xrange, thick, color, colorf) {}
+
+        BarSeries(forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, float scale, xrange_t xrange, bool thick, uint32_t color, uint32_t (*colorf)(time_t const &) = nullptr)
+            : points(), thickness(thick ? to_entry.interval : 0), color(color), colorf(colorf)
         {
             if (from_entry.start != to_entry.start ||
                 from_entry.interval != to_entry.interval ||
@@ -204,9 +217,9 @@ protected:
         {
             if (points.size() == 0)
                 return;
-            canvas->setColor(color);
             for (size_t i = 0; i < points.size(); i++)
             {
+                canvas->setColor(colorf ? colorf(points[i].t) : color);
                 int32_t y1 = lround(y0 + yscale * (points[i].from - y0val));
                 int32_t y2 = lround(y0 + yscale * (points[i].to - y0val));
                 if (thickness)
