@@ -31,6 +31,7 @@ ForecastPanel *temperatureForecastPanel,
     *pressureForecastPanel;
 Panel *currentPanel,
     *lastDrawnPlanel;
+unsigned long lastPanelChange;
 
 template <typename T>
 inline bool changed(T *storage, T val)
@@ -89,6 +90,9 @@ void redraw()
   if (!headerRedrawn && !currentPanelRedrawn && lastDrawnPlanel == currentPanel)
     return;
 
+  if (lastDrawnPlanel != currentPanel)
+    lastPanelChange = millis();
+
   displayCanvas->clear();
   headerPanel->canvas->pushSprite(0, 0);
   currentPanel->canvas->pushSprite(0, settings::header_height);
@@ -137,8 +141,7 @@ void mqtt_callback(char *topic, byte *payload, unsigned int length)
   float reading_temperature;
   float reading_humidity;
   float reading_pressure;
-  const int json_doc_capacity = JSON_OBJECT_SIZE(7); // WSDCGQ11LM
-  StaticJsonDocument<json_doc_capacity> doc;
+  StaticJsonDocument<JSON_OBJECT_SIZE(32)> doc;
 
   DeserializationError error = deserializeJson(doc, payload, length);
   if (error)
@@ -197,12 +200,20 @@ void touch_loop()
     currentPanel = currentPanel->touch(t.x, t.y - settings::header_height);
 }
 
+void panel_timeout_loop()
+{
+  if (currentPanel != mainPanel &&
+      millis() - lastPanelChange > settings::panel_timeout * 1000)
+    currentPanel = mainPanel;
+}
+
 void loop()
 {
   esp_task_wdt_reset();
-  touch_loop();
   wifi_loop();
   mqtt_loop();
   forecast_loop();
+  panel_timeout_loop();
+  touch_loop();
   redraw();
 }

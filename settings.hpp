@@ -48,6 +48,7 @@ namespace settings
     const Lang lang = LANG;
     const int32_t header_height = 22;
     const uint32_t watchdog_timer = 60;
+    const unsigned long panel_timeout = 30;
     namespace time
     {
         const char *const ntpServer = "pool.ntp.org";
