@@ -105,8 +105,9 @@ namespace settings
             const uint32_t night = m5gfx::convert_to_rgb888(0xd8d8d8u);
             const uint32_t grid = m5gfx::convert_to_rgb888(0x808080u);
             const uint32_t airtmp = m5gfx::convert_to_rgb888(0xff0000u);
+            const uint32_t airtmp_min_max = m5gfx::convert_to_rgb888(0xffc0c0u);
             const uint32_t wchill = m5gfx::convert_to_rgb888(0x0000ffu);
-            const uint32_t grdtmp = m5gfx::convert_to_rgb888(0xa52a2au);
+            const uint32_t grdtmp_min_max = m5gfx::convert_to_rgb888(0xa52a2au);
             const uint32_t pcpttl[] = {
                 m5gfx::convert_to_rgb888(0x808080u),
                 m5gfx::convert_to_rgb888(0x00aa00u),

@@ -154,9 +154,9 @@ protected:
         }
     };
 
-    class BarSeries : public Series
+    class BiSeries : public Series
     {
-    private:
+    protected:
         struct point_t
         {
             time_t t;
@@ -165,31 +165,12 @@ protected:
         };
 
         std::vector<point_t> points;
-        time_t thickness;
-        uint32_t color; // used unless colorf == nullptr
-        uint32_t (*colorf)(time_t const &);
 
-    public:
-        BarSeries(forecast_entry_t<float> const &entry, xrange_t xrange, bool thick, uint32_t (*colorf)(time_t const &))
-            : BarSeries(entry, xrange, thick, 0, colorf) {}
+        BiSeries(forecast_entry_t<float> const &entry, float scale, xrange_t xrange)
+            : BiSeries({entry.start, entry.interval, std::vector<float>(entry.points.size())}, entry, scale, xrange) {}
 
-        BarSeries(forecast_entry_t<float> const &entry, xrange_t xrange, bool thick, uint32_t color, uint32_t (*colorf)(time_t const &) = nullptr)
-            : BarSeries(entry, 1, xrange, thick, color, colorf) {}
-
-        BarSeries(forecast_entry_t<float> const &entry, float scale, xrange_t xrange, bool thick, uint32_t (*colorf)(time_t const &))
-            : BarSeries(entry, scale, xrange, thick, 0, colorf) {}
-
-        BarSeries(forecast_entry_t<float> const &entry, float scale, xrange_t xrange, bool thick, uint32_t color, uint32_t (*colorf)(time_t const &) = nullptr)
-            : BarSeries({entry.start, entry.interval, std::vector<float>(entry.points.size())}, entry, scale, xrange, thick, color, colorf) {}
-
-        BarSeries(forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, xrange_t xrange, bool thick, uint32_t (*colorf)(time_t const &))
-            : BarSeries(from_entry, to_entry, xrange, thick, 0, colorf) {}
-
-        BarSeries(forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, xrange_t xrange, bool thick, uint32_t color, uint32_t (*colorf)(time_t const &) = nullptr)
-            : BarSeries(from_entry, to_entry, 1, xrange, thick, color, colorf) {}
-
-        BarSeries(forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, float scale, xrange_t xrange, bool thick, uint32_t color, uint32_t (*colorf)(time_t const &) = nullptr)
-            : points(), thickness(thick ? to_entry.interval : 0), color(color), colorf(colorf)
+        BiSeries(forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, float scale, xrange_t xrange)
+            : points()
         {
             if (from_entry.start != to_entry.start ||
                 from_entry.interval != to_entry.interval ||
@@ -213,30 +194,8 @@ protected:
             }
         }
 
-        ~BarSeries() = default;
-
-        void plot(M5Canvas *canvas, int32_t x0, int32_t y0, time_t x0val, float y0val, float xscale, float yscale) const
-        {
-            if (points.size() == 0)
-                return;
-            for (size_t i = 0; i < points.size(); i++)
-            {
-                canvas->setColor(colorf ? colorf(points[i].t) : color);
-                int32_t y1 = lround(y0 + yscale * (points[i].from - y0val));
-                int32_t y2 = lround(y0 + yscale * (points[i].to - y0val));
-                if (thickness)
-                {
-                    int32_t x1 = lround(x0 + xscale * (points[i].t - thickness / 2 - x0val));
-                    int32_t x2 = lround(x0 + xscale * (points[i].t + thickness / 2 - x0val));
-                    canvas->fillRect(x1, y2, x2 - x1, y1 - y2 + 1);
-                }
-                else
-                {
-                    int32_t x = lround(x0 + xscale * (points[i].t - x0val));
-                    canvas->drawLine(x, y1, x, y2);
-                }
-            }
-        }
+    public:
+        virtual ~BiSeries() = default;
 
         float getMin() const
         {
@@ -262,6 +221,101 @@ protected:
                     max = points[i].to;
             }
             return max;
+        }
+    };
+
+    class BarSeries : public BiSeries
+    {
+    private:
+        time_t thickness;
+        uint32_t color; // used unless colorf == nullptr
+        uint32_t (*colorf)(time_t const &);
+
+    public:
+        BarSeries(forecast_entry_t<float> const &entry, xrange_t xrange, bool thick, uint32_t (*colorf)(time_t const &))
+            : BarSeries(entry, xrange, thick, 0, colorf) {}
+
+        BarSeries(forecast_entry_t<float> const &entry, xrange_t xrange, bool thick, uint32_t color, uint32_t (*colorf)(time_t const &) = nullptr)
+            : BarSeries(entry, 1, xrange, thick, color, colorf) {}
+
+        BarSeries(forecast_entry_t<float> const &entry, float scale, xrange_t xrange, bool thick, uint32_t (*colorf)(time_t const &))
+            : BarSeries(entry, scale, xrange, thick, 0, colorf) {}
+
+        BarSeries(forecast_entry_t<float> const &entry, float scale, xrange_t xrange, bool thick, uint32_t color, uint32_t (*colorf)(time_t const &) = nullptr)
+            : BiSeries(entry, scale, xrange), thickness(thick ? entry.interval : 0), color(color), colorf(colorf) {}
+
+        BarSeries(forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, xrange_t xrange, bool thick, uint32_t (*colorf)(time_t const &))
+            : BarSeries(from_entry, to_entry, xrange, thick, 0, colorf) {}
+
+        BarSeries(forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, xrange_t xrange, bool thick, uint32_t color, uint32_t (*colorf)(time_t const &) = nullptr)
+            : BarSeries(from_entry, to_entry, 1, xrange, thick, color, colorf) {}
+
+        BarSeries(forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, float scale, xrange_t xrange, bool thick, uint32_t color, uint32_t (*colorf)(time_t const &) = nullptr)
+            : BiSeries(from_entry, to_entry, scale, xrange), thickness(thick ? to_entry.interval : 0), color(color), colorf(colorf) {}
+
+        ~BarSeries() = default;
+
+        void plot(M5Canvas *canvas, int32_t x0, int32_t y0, time_t x0val, float y0val, float xscale, float yscale) const
+        {
+            if (points.size() == 0)
+                return;
+            for (size_t i = 0; i < points.size(); i++)
+            {
+                canvas->setColor(colorf ? colorf(points[i].t) : color);
+                int32_t y1 = lround(y0 + yscale * (points[i].from - y0val));
+                int32_t y2 = lround(y0 + yscale * (points[i].to - y0val));
+                if (thickness)
+                {
+                    int32_t x1 = lround(x0 + xscale * (points[i].t - thickness / 2 - x0val));
+                    int32_t x2 = lround(x0 + xscale * (points[i].t + thickness / 2 - x0val));
+                    canvas->fillRect(x1, y2, x2 - x1, y1 - y2 + 1);
+                }
+                else
+                {
+                    int32_t x = lround(x0 + xscale * (points[i].t - x0val));
+                    canvas->drawLine(x, y1, x, y2);
+                }
+            }
+        }
+    };
+
+    class AreaSeries : public BiSeries
+    {
+    private:
+        uint32_t color;
+
+    public:
+        AreaSeries(forecast_entry_t<float> const &entry, xrange_t xrange, uint32_t color)
+            : AreaSeries(entry, 1, xrange, color) {}
+
+        AreaSeries(forecast_entry_t<float> const &entry, float scale, xrange_t xrange, uint32_t color)
+            : BiSeries(entry, scale, xrange), color(color) {}
+
+        AreaSeries(forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, xrange_t xrange, uint32_t color)
+            : AreaSeries(from_entry, to_entry, 1, xrange, color) {}
+
+        AreaSeries(forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, float scale, xrange_t xrange, uint32_t color)
+            : BiSeries(from_entry, to_entry, scale, xrange), color(color) {}
+
+        ~AreaSeries() = default;
+
+        void plot(M5Canvas *canvas, int32_t x0, int32_t y0, time_t x0val, float y0val, float xscale, float yscale) const
+        {
+            if (points.size() <= 1)
+                return;
+
+            canvas->setColor(color);
+            for (size_t i = 1; i < points.size(); i++)
+            {
+                int32_t x1 = lround(x0 + xscale * (points[i-1].t - x0val));
+                int32_t y11 = lround(y0 + yscale * (points[i-1].from - y0val));
+                int32_t y12 = lround(y0 + yscale * (points[i-1].to - y0val));
+                int32_t x2 = lround(x0 + xscale * (points[i].t - x0val));
+                int32_t y21 = lround(y0 + yscale * (points[i].from - y0val));
+                int32_t y22 = lround(y0 + yscale * (points[i].to - y0val));
+                canvas->fillTriangle(x1, y11, x2, y21, x2, y22);
+                canvas->fillTriangle(x1, y11, x1, y12, x2, y22);
+            }
         }
     };
 
