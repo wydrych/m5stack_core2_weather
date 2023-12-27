@@ -44,8 +44,19 @@ protected:
 
     class Series
     {
+    private:
+        bool below_grid;
+
     public:
+        Series(bool below_grid)
+            : below_grid(below_grid) {}
+
         virtual ~Series() = default;
+
+        bool isBelowGrid() const
+        {
+            return below_grid;
+        }
 
         virtual void plot(M5Canvas *canvas, int32_t x0, int32_t y0, time_t x0val, float y0val, float xscale, float yscale) const = 0;
         virtual float getMin() const = 0;
@@ -96,9 +107,16 @@ protected:
 
     public:
         LineSeries(forecast_entry_t<float> const &entry, xrange_t xrange, bool thick, uint32_t color)
-            : LineSeries(entry, 1, xrange, thick, color) {}
+            : LineSeries(false, entry, xrange, thick, color) {}
+
+        LineSeries(bool below_grid, forecast_entry_t<float> const &entry, xrange_t xrange, bool thick, uint32_t color)
+            : LineSeries(below_grid, entry, 1, xrange, thick, color) {}
+
         LineSeries(forecast_entry_t<float> const &entry, float scale, xrange_t xrange, bool thick, uint32_t color)
-            : points(), thick(thick), color(color)
+            : LineSeries(false, entry, scale, xrange, thick, color) {}
+
+        LineSeries(bool below_grid, forecast_entry_t<float> const &entry, float scale, xrange_t xrange, bool thick, uint32_t color)
+            : Series(below_grid), points(), thick(thick), color(color)
         {
             points.reserve((xrange.to - xrange.from) / entry.interval + 1);
             for (size_t i = 0; i < entry.points.size(); i++)
@@ -166,11 +184,11 @@ protected:
 
         std::vector<point_t> points;
 
-        BiSeries(forecast_entry_t<float> const &entry, float scale, xrange_t xrange)
-            : BiSeries({entry.start, entry.interval, std::vector<float>(entry.points.size())}, entry, scale, xrange) {}
+        BiSeries(bool below_grid, forecast_entry_t<float> const &entry, float scale, xrange_t xrange)
+            : BiSeries(below_grid, {entry.start, entry.interval, std::vector<float>(entry.points.size())}, entry, scale, xrange) {}
 
-        BiSeries(forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, float scale, xrange_t xrange)
-            : points()
+        BiSeries(bool below_grid, forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, float scale, xrange_t xrange)
+            : Series(below_grid), points()
         {
             if (from_entry.start != to_entry.start ||
                 from_entry.interval != to_entry.interval ||
@@ -233,25 +251,46 @@ protected:
 
     public:
         BarSeries(forecast_entry_t<float> const &entry, xrange_t xrange, bool thick, uint32_t (*colorf)(time_t const &))
-            : BarSeries(entry, xrange, thick, 0, colorf) {}
+            : BarSeries(false, entry, xrange, thick, colorf) {}
+
+        BarSeries(bool below_grid, forecast_entry_t<float> const &entry, xrange_t xrange, bool thick, uint32_t (*colorf)(time_t const &))
+            : BarSeries(below_grid, entry, xrange, thick, 0, colorf) {}
 
         BarSeries(forecast_entry_t<float> const &entry, xrange_t xrange, bool thick, uint32_t color, uint32_t (*colorf)(time_t const &) = nullptr)
-            : BarSeries(entry, 1, xrange, thick, color, colorf) {}
+            : BarSeries(false, entry, xrange, thick, color, colorf) {}
+
+        BarSeries(bool below_grid, forecast_entry_t<float> const &entry, xrange_t xrange, bool thick, uint32_t color, uint32_t (*colorf)(time_t const &) = nullptr)
+            : BarSeries(below_grid, entry, 1, xrange, thick, color, colorf) {}
 
         BarSeries(forecast_entry_t<float> const &entry, float scale, xrange_t xrange, bool thick, uint32_t (*colorf)(time_t const &))
-            : BarSeries(entry, scale, xrange, thick, 0, colorf) {}
+            : BarSeries(false, entry, scale, xrange, thick, colorf) {}
+
+        BarSeries(bool below_grid, forecast_entry_t<float> const &entry, float scale, xrange_t xrange, bool thick, uint32_t (*colorf)(time_t const &))
+            : BarSeries(below_grid, entry, scale, xrange, thick, 0, colorf) {}
 
         BarSeries(forecast_entry_t<float> const &entry, float scale, xrange_t xrange, bool thick, uint32_t color, uint32_t (*colorf)(time_t const &) = nullptr)
-            : BiSeries(entry, scale, xrange), thickness(thick ? entry.interval : 0), color(color), colorf(colorf) {}
+            : BarSeries(false, entry, scale, xrange, thick, color, colorf) {}
+
+        BarSeries(bool below_grid, forecast_entry_t<float> const &entry, float scale, xrange_t xrange, bool thick, uint32_t color, uint32_t (*colorf)(time_t const &) = nullptr)
+            : BiSeries(below_grid, entry, scale, xrange), thickness(thick ? entry.interval : 0), color(color), colorf(colorf) {}
 
         BarSeries(forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, xrange_t xrange, bool thick, uint32_t (*colorf)(time_t const &))
-            : BarSeries(from_entry, to_entry, xrange, thick, 0, colorf) {}
+            : BarSeries(false, from_entry, to_entry, xrange, thick, colorf) {}
+
+        BarSeries(bool below_grid, forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, xrange_t xrange, bool thick, uint32_t (*colorf)(time_t const &))
+            : BarSeries(below_grid, from_entry, to_entry, xrange, thick, 0, colorf) {}
 
         BarSeries(forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, xrange_t xrange, bool thick, uint32_t color, uint32_t (*colorf)(time_t const &) = nullptr)
-            : BarSeries(from_entry, to_entry, 1, xrange, thick, color, colorf) {}
+            : BarSeries(false, from_entry, to_entry, xrange, thick, color, colorf) {}
+
+        BarSeries(bool below_grid, forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, xrange_t xrange, bool thick, uint32_t color, uint32_t (*colorf)(time_t const &) = nullptr)
+            : BarSeries(below_grid, from_entry, to_entry, 1, xrange, thick, color, colorf) {}
 
         BarSeries(forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, float scale, xrange_t xrange, bool thick, uint32_t color, uint32_t (*colorf)(time_t const &) = nullptr)
-            : BiSeries(from_entry, to_entry, scale, xrange), thickness(thick ? to_entry.interval : 0), color(color), colorf(colorf) {}
+            : BarSeries(false, from_entry, to_entry, scale, xrange, thick, color, colorf) {}
+
+        BarSeries(bool below_grid, forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, float scale, xrange_t xrange, bool thick, uint32_t color, uint32_t (*colorf)(time_t const &) = nullptr)
+            : BiSeries(below_grid, from_entry, to_entry, scale, xrange), thickness(thick ? to_entry.interval : 0), color(color), colorf(colorf) {}
 
         ~BarSeries() = default;
 
@@ -286,16 +325,28 @@ protected:
 
     public:
         AreaSeries(forecast_entry_t<float> const &entry, xrange_t xrange, uint32_t color)
-            : AreaSeries(entry, 1, xrange, color) {}
+            : AreaSeries(false, entry, xrange, color) {}
+
+        AreaSeries(bool below_grid, forecast_entry_t<float> const &entry, xrange_t xrange, uint32_t color)
+            : AreaSeries(below_grid, entry, 1, xrange, color) {}
 
         AreaSeries(forecast_entry_t<float> const &entry, float scale, xrange_t xrange, uint32_t color)
-            : BiSeries(entry, scale, xrange), color(color) {}
+            : AreaSeries(false, entry, scale, xrange, color) {}
+
+        AreaSeries(bool below_grid, forecast_entry_t<float> const &entry, float scale, xrange_t xrange, uint32_t color)
+            : BiSeries(below_grid, entry, scale, xrange), color(color) {}
 
         AreaSeries(forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, xrange_t xrange, uint32_t color)
-            : AreaSeries(from_entry, to_entry, 1, xrange, color) {}
+            : AreaSeries(false, from_entry, to_entry, xrange, color) {}
+
+        AreaSeries(bool below_grid, forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, xrange_t xrange, uint32_t color)
+            : AreaSeries(below_grid, from_entry, to_entry, 1, xrange, color) {}
 
         AreaSeries(forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, float scale, xrange_t xrange, uint32_t color)
-            : BiSeries(from_entry, to_entry, scale, xrange), color(color) {}
+            : AreaSeries(false, from_entry, to_entry, scale, xrange, color) {}
+
+        AreaSeries(bool below_grid, forecast_entry_t<float> const &from_entry, forecast_entry_t<float> const &to_entry, float scale, xrange_t xrange, uint32_t color)
+            : BiSeries(below_grid, from_entry, to_entry, scale, xrange), color(color) {}
 
         ~AreaSeries() = default;
 
@@ -307,9 +358,9 @@ protected:
             canvas->setColor(color);
             for (size_t i = 1; i < points.size(); i++)
             {
-                int32_t x1 = lround(x0 + xscale * (points[i-1].t - x0val));
-                int32_t y11 = lround(y0 + yscale * (points[i-1].from - y0val));
-                int32_t y12 = lround(y0 + yscale * (points[i-1].to - y0val));
+                int32_t x1 = lround(x0 + xscale * (points[i - 1].t - x0val));
+                int32_t y11 = lround(y0 + yscale * (points[i - 1].from - y0val));
+                int32_t y12 = lround(y0 + yscale * (points[i - 1].to - y0val));
                 int32_t x2 = lround(x0 + xscale * (points[i].t - x0val));
                 int32_t y21 = lround(y0 + yscale * (points[i].from - y0val));
                 int32_t y22 = lround(y0 + yscale * (points[i].to - y0val));
@@ -554,10 +605,16 @@ public:
         canvas->setClipRect(x0 + 1, y1 + 1, x1 - x0 - 1, y0 - y1 - 1);
 
         plotNights(xrange, x0, xscale);
+
+        for (std::unique_ptr<Series> const &s : series)
+            if (s->isBelowGrid())
+                s->plot(canvas, x0, y0, xrange.from, yrange.from, xscale, yscale);
+
         plotGrid(xsteps, ysteps, x0, y0, xrange.from, yrange.from, xscale, yscale);
 
         for (std::unique_ptr<Series> const &s : series)
-            s->plot(canvas, x0, y0, xrange.from, yrange.from, xscale, yscale);
+            if (!s->isBelowGrid())
+                s->plot(canvas, x0, y0, xrange.from, yrange.from, xscale, yscale);
 
         canvas->clearClipRect();
 
