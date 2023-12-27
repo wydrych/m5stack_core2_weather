@@ -531,6 +531,7 @@ protected:
     virtual xrange_t getXrange() const = 0;
     virtual yrange_t getSoftYrange() const = 0;
     virtual yrange_t getHardYrange() const = 0;
+    virtual char *getUnitLabel() const = 0;
     virtual void fillSeries(xrange_t xrange, std::vector<std::unique_ptr<Series>> &series) = 0;
 
     ForecastPanel(M5Canvas *parentCanvas, int32_t w, int32_t h, lgfx::v1::color_depth_t depth)
@@ -573,7 +574,8 @@ public:
                 ylabel_width = ystepwidth;
         }
 
-        int32_t x0 = settings::forecast::plot::margin + ylabel_width + 3;
+        char *unit_label = getUnitLabel();
+        int32_t x0 = settings::forecast::plot::margin + (unit_label ? settings::forecast::plot::label_height + 4 : 0) + ylabel_width + 3;
         int32_t x1 = canvas->width() - settings::forecast::plot::margin - 1;
         int32_t y0 = canvas->height() - 1 - (settings::forecast::plot::margin + settings::forecast::plot::label_height + 4);
         int32_t y1 = settings::forecast::plot::margin;
@@ -585,6 +587,14 @@ public:
         canvas->setColor(settings::colors::plot::border);
 
         canvas->setTextDatum(m5gfx::textdatum::baseline_center);
+
+        if (unit_label)
+        {
+            canvas->setRotation(3);
+            canvas->drawString(unit_label, canvas->width() - 1 - (y0 + y1) / 2, settings::forecast::plot::label_height + settings::forecast::plot::margin);
+            canvas->setRotation(0);
+        }
+
         for (xstep_t xstep : xsteps)
         {
             int32_t x = lround(x0 + xscale * (xstep.value - xrange.from));

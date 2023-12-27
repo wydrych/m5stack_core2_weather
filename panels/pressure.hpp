@@ -48,6 +48,11 @@ protected:
         return {NAN, NAN};
     }
 
+    char *getUnitLabel() const
+    {
+        return "hPa";
+    }
+
 public:
     PressureForecastPanel(M5Canvas *parentCanvas, int32_t w, int32_t h, lgfx::v1::color_depth_t depth)
         : ForecastPanel(parentCanvas, w, h, depth)

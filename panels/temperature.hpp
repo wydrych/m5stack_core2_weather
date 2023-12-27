@@ -20,6 +20,11 @@ protected:
         return {NAN, NAN};
     }
 
+    char *getUnitLabel() const
+    {
+        return "°C";
+    }
+
     void fillSeries(xrange_t xrange, std::vector<std::unique_ptr<Series>> &series)
     {
         std::unique_ptr<Series> airtmp_min_max_series(new AreaSeries(true, forecast.airtmp_min, forecast.airtmp_max, xrange, settings::colors::plot::airtmp_min_max));
