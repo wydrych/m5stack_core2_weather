@@ -4,6 +4,7 @@
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 #include <time.h>
+#include <lgfx/utility/miniz.h>
 
 #include "icons/icons.hpp"
 #include "forecast.hpp"
@@ -188,6 +189,23 @@ void mqtt_loop()
 void touch_loop()
 {
   M5.update();
+
+  if (M5.BtnPWR.wasClicked())
+  {
+    M5_LOGI("PNG screenshot requested");
+    size_t pngSize;
+    uint8_t *screenshot = (uint8_t *)M5.Display.createPng(&pngSize, 0, 0, M5.Display.width(), M5.Display.height());
+    M5_LOGI("PNG screenshot buffer size: %zu, sending hexdump to serial", pngSize);
+    // use a following command to save to PNG file:
+    //   python3 -c 'import sys; open("screenshot.png", "wb").write(bytes.fromhex(sys.stdin.read()))'
+    for (size_t i = 0; i < pngSize; i++)
+    {
+      Serial.printf("%02x", screenshot[i]);
+    }
+    Serial.println();
+    mz_free(screenshot);
+  }
+
   if (M5.Touch.getCount() != 1)
     return;
 
