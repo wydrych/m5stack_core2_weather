@@ -113,7 +113,7 @@ namespace settings
                 m5gfx::convert_to_rgb888(0x808080u),
                 m5gfx::convert_to_rgb888(0x00aa00u),
                 m5gfx::convert_to_rgb888(0x1432c8u),
-                m5gfx::convert_to_rgb888(0xc814c8u),
+                m5gfx::convert_to_rgb888(0x12CBB7u),
             };
             const uint32_t trpres = m5gfx::convert_to_rgb888(0x000000u);
         }
