@@ -1,13 +1,4 @@
-#pragma once
-
-#define NUM_LANG 2
-enum Lang
-{
-    LANG_EN = 0,
-    LANG_PL
-};
-
-// translations in order of Lang
+#include "lang.hpp"
 
 const char *const weekdays_short[7][NUM_LANG] = {
     {"Sun", "nd."},

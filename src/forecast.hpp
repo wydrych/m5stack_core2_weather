@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 template <typename T>
 struct forecast_entry_t
 {
@@ -25,4 +27,4 @@ struct forecast_t
 
 extern forecast_t forecast;
 
-void on_forecast_successfull_fetch(time_t);
+void forecast_loop();

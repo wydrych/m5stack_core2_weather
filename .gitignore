@@ -2,5 +2,5 @@
 /.vscode/
 /build/
 
-/fonts/*.ttf
+/src/fonts/*.ttf
 /settings-private.hpp

@@ -1,11 +1,9 @@
-#pragma once
-
 #include <M5Unified.h>
 #include <ArduinoJson.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 
-#include "forecast.h"
+#include "forecast.hpp"
 #include "settings.hpp"
 
 extern bool wifi_status;
@@ -92,14 +90,14 @@ bool https_json_request(JsonDocument &doc, const char *root_ca, const char *meth
 time_t forecast_latest_available()
 {
     DynamicJsonDocument doc(1024);
-    String available_url = String(settings::forecast::base_url) + settings::forecast::available;
-    if (!https_json_request(doc, settings::forecast::root_ca, "GET", available_url.c_str(), nullptr, 0))
+    String available_url = String(settings.forecast.base_url) + settings.forecast.available;
+    if (!https_json_request(doc, settings.forecast.root_ca, "GET", available_url.c_str(), nullptr, 0))
         return 0;
 
-    JsonArray available = doc[settings::forecast::model];
+    JsonArray available = doc[settings.forecast.model];
     if (available.isNull())
     {
-        M5_LOGE("%s does not contain model %s", available_url.c_str(), settings::forecast::model);
+        M5_LOGE("%s does not contain model %s", available_url.c_str(), settings.forecast.model);
         return 0;
     }
 
@@ -117,8 +115,8 @@ String forecast_fetch_prepare_payload(time_t timestamp)
     DynamicJsonDocument doc(256);
     doc["date"] = timestamp;
     JsonObject point = doc.createNestedObject("point");
-    point["lat"] = std::to_string(settings::forecast::lat);
-    point["lon"] = std::to_string(settings::forecast::lon);
+    point["lat"] = std::to_string(settings.forecast.lat);
+    point["lon"] = std::to_string(settings.forecast.lon);
     return doc.as<String>();
 }
 
@@ -128,9 +126,9 @@ bool forecast_fetch(time_t timestamp, forecast_t &target)
     M5_LOGD("request payload: %s", payload.c_str());
 
     DynamicJsonDocument doc(64 * 1024);
-    String model_url = String(settings::forecast::base_url) + settings::forecast::model;
+    String model_url = String(settings.forecast.base_url) + settings.forecast.model;
 
-    if (!https_json_request(doc, settings::forecast::root_ca, "GET", model_url.c_str(), (uint8_t *)payload.c_str(), payload.length()))
+    if (!https_json_request(doc, settings.forecast.root_ca, "GET", model_url.c_str(), (uint8_t *)payload.c_str(), payload.length()))
         return false;
 
     JsonObject data = doc["data"];
@@ -159,13 +157,13 @@ void forecast_loop()
     static unsigned long last_refresh;
     static unsigned long last_retry;
     unsigned long now = millis();
-    if (last_refresh != 0 && now - last_refresh < settings::forecast::refresh * 1000)
+    if (last_refresh != 0 && now - last_refresh < settings.forecast.refresh * 1000)
         return;
-    if (last_retry != 0 && now - last_retry < settings::forecast::retry * 1000)
+    if (last_retry != 0 && now - last_retry < settings.forecast.retry * 1000)
         return;
 
     last_retry = now;
-    M5_LOGI("checking for newer %s forecast", settings::forecast::model);
+    M5_LOGI("checking for newer %s forecast", settings.forecast.model);
 
     time_t latest_available = forecast_latest_available();
     if (!latest_available)

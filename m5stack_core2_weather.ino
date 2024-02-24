@@ -6,16 +6,16 @@
 #include <time.h>
 #include <lgfx/utility/miniz.h>
 
-#include "icons/icons.hpp"
-#include "forecast.hpp"
-#include "lang.hpp"
-#include "settings.hpp"
-#include "panels/header.hpp"
-#include "panels/main.hpp"
-#include "panels/forecast.hpp"
-#include "panels/temperature.hpp"
-#include "panels/pressure.hpp"
-#include "panels/precipitation.hpp"
+#include "src/icons/icons.hpp"
+#include "src/forecast.hpp"
+#include "src/lang.hpp"
+#include "src/settings.hpp"
+#include "src/panels/header.hpp"
+#include "src/panels/main.hpp"
+#include "src/panels/forecast.hpp"
+#include "src/panels/temperature.hpp"
+#include "src/panels/pressure.hpp"
+#include "src/panels/precipitation.hpp"
 
 bool wifi_status;
 bool mqtt_status;
@@ -45,7 +45,7 @@ inline bool changed(T *storage, T val)
 
 void setup()
 {
-    esp_task_wdt_init(settings::watchdog_timer, true);
+    esp_task_wdt_init(settings.watchdog_timer, true);
     esp_task_wdt_add(NULL);
 
     M5.Log.setEnableColor(m5::log_target_serial, false);
@@ -64,22 +64,22 @@ void setup()
     displayCanvas->setColorDepth(M5.Display.getColorDepth());
     displayCanvas->createSprite(displayWidth, displayHeight);
 
-    headerPanel = new HeaderPanel(displayCanvas, displayWidth, settings::header_height, M5.Display.getColorDepth());
-    mainPanel = new MainPanel(displayCanvas, displayWidth, displayHeight - settings::header_height, M5.Display.getColorDepth());
-    temperatureForecastPanel = new TemperatureForecastPanel(displayCanvas, displayWidth, displayHeight - settings::header_height, M5.Display.getColorDepth());
-    precipitationForecastPanel = new PrecipitationForecastPanel(displayCanvas, displayWidth, displayHeight - settings::header_height, M5.Display.getColorDepth());
-    pressureForecastPanel = new PressureForecastPanel(displayCanvas, displayWidth, displayHeight - settings::header_height, M5.Display.getColorDepth());
+    headerPanel = new HeaderPanel(displayCanvas, displayWidth, settings.header_height, M5.Display.getColorDepth());
+    mainPanel = new MainPanel(displayCanvas, displayWidth, displayHeight - settings.header_height, M5.Display.getColorDepth());
+    temperatureForecastPanel = new TemperatureForecastPanel(displayCanvas, displayWidth, displayHeight - settings.header_height, M5.Display.getColorDepth());
+    precipitationForecastPanel = new PrecipitationForecastPanel(displayCanvas, displayWidth, displayHeight - settings.header_height, M5.Display.getColorDepth());
+    pressureForecastPanel = new PressureForecastPanel(displayCanvas, displayWidth, displayHeight - settings.header_height, M5.Display.getColorDepth());
 
     mainPanel->setForecastPanels(temperatureForecastPanel, precipitationForecastPanel, pressureForecastPanel);
 
     currentPanel = mainPanel;
 
-    WiFi.begin(settings::wifi::ssid, settings::wifi::password);
+    WiFi.begin(settings.wifi.ssid, settings.wifi.password);
 
-    mqtt_client.setServer(settings::mqtt::server, settings::mqtt::port);
+    mqtt_client.setServer(settings.mqtt.server, settings.mqtt.port);
     mqtt_client.setCallback(mqtt_callback);
 
-    configTzTime(settings::time::tz, settings::time::ntpServer);
+    configTzTime(settings.time.tz, settings.time.ntpServer);
 }
 
 void redraw()
@@ -96,7 +96,7 @@ void redraw()
 
     displayCanvas->clear();
     headerPanel->canvas->pushSprite(0, 0);
-    currentPanel->canvas->pushSprite(0, settings::header_height);
+    currentPanel->canvas->pushSprite(0, settings.header_height);
     lastDrawnPlanel = currentPanel;
 
     M5.Display.waitDisplay();
@@ -129,7 +129,7 @@ void wifi_loop()
 void on_mqtt_connected()
 {
     M5_LOGI("MQTT connected");
-    mqtt_client.subscribe(settings::mqtt::topic);
+    mqtt_client.subscribe(settings.mqtt.topic);
 }
 
 void on_mqtt_disconnected()
@@ -164,11 +164,12 @@ void mqtt_loop()
     {
         static unsigned long last_reconnect;
         unsigned long now = millis();
-        if (last_reconnect == 0 || now - last_reconnect >= settings::mqtt::reconnect * 1000)
+        if (last_reconnect == 0 || now - last_reconnect >= settings.mqtt.reconnect * 1000)
         {
             last_reconnect = now;
             M5_LOGI("Trying to connect MQTT");
-            mqtt_client.connect((String("M5Stack Core2 ") + WiFi.macAddress()).c_str());
+            mqtt_client.connect(settings.mqtt.client_name,
+                                settings.mqtt.user, settings.mqtt.password);
         }
     }
     if (!wifi_status && mqtt_status)
@@ -214,14 +215,14 @@ void touch_loop()
         return;
 
     M5_LOGI("touch (%d,%d)", t.x, t.y);
-    if (t.y >= settings::header_height)
-        currentPanel = currentPanel->touch(t.x, t.y - settings::header_height);
+    if (t.y >= settings.header_height)
+        currentPanel = currentPanel->touch(t.x, t.y - settings.header_height);
 }
 
 void panel_timeout_loop()
 {
     if (currentPanel != mainPanel &&
-        millis() - lastPanelChange > settings::panel_timeout * 1000)
+        millis() - lastPanelChange > settings.panel_timeout * 1000)
         currentPanel = mainPanel;
 }
 
