@@ -41,7 +41,7 @@ void HeaderPanel::draw_icons()
 void HeaderPanel::draw_time(time_t now)
 {
     struct tm timeinfo;
-    const int buflen = 64;
+    const size_t buflen = 64;
     char buf[buflen];
 
     localtime_r(&now, &timeinfo);
@@ -49,12 +49,7 @@ void HeaderPanel::draw_time(time_t now)
     {
         return;
     }
-    const char *weekday = weekdays_short[timeinfo.tm_wday][settings.lang];
-    strcpy(buf, weekday);
-    strftime(buf + strlen(weekday),
-             buflen - strlen(weekday),
-             time_format[settings.lang],
-             &timeinfo);
+    settings.lang.formatTime(buf, buflen, &timeinfo);
     canvas->setTextDatum(m5gfx::textdatum::baseline_right);
     canvas->drawString(buf, canvas->width() - 2, 17, settings.fonts.currentTime);
 }

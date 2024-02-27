@@ -47,7 +47,7 @@
 #define TZ "UTC"
 #endif
 #ifndef LANG
-#define LANG Lang::LANG_EN
+#define LANG LANG_EN
 #endif
 
 Settings::Settings()
