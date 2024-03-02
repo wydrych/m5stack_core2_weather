@@ -34,5 +34,5 @@ public:
     size_t formatTime(char *buf, size_t bufsize, const struct tm *timeinfo) const;
 };
 
-#define LANG_PL Lang("nd.", "pn.", "wt.", "śr.", "czw.", "pt.", "sb.", ", %d.%m %H:%M")
 #define LANG_EN Lang("", "", "", "", "", "", "", "%a, %b %d %I:%M %p")
+#define LANG_PL Lang("nd.", "pn.", "wt.", "śr.", "czw.", "pt.", "sb.", ", %d.%m %H:%M")
