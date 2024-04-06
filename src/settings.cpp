@@ -25,6 +25,9 @@
 #ifndef MQTT_TOPIC
 #define MQTT_TOPIC NULL
 #endif
+#ifndef MQTT_TOPIC_STATUS
+#define MQTT_TOPIC_STATUS "m5stack_core2_weather/status"
+#endif
 #ifndef MQTT_USER
 #define MQTT_USER NULL
 #endif
@@ -71,7 +74,9 @@ Settings::Mqtt::Mqtt()
       password(MQTT_PASSWORD),
       client_name(getClientName(MQTT_CLIENT_NAME_PREFIX)),
       topic(MQTT_TOPIC),
-      reconnect(3000) {}
+      status_interval(60),
+      status_topic_name(MQTT_TOPIC_STATUS),
+      reconnect(3) {}
 
 char *Settings::Mqtt::getClientName(const char *prefix) const
 {

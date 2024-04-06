@@ -226,6 +226,45 @@ void panel_timeout_loop()
         currentPanel = mainPanel;
 }
 
+void status_loop()
+{
+    static unsigned long next = 0;
+    if (millis() < next)
+        return;
+    next += settings.mqtt.status_interval * 1000;
+
+    multi_heap_info_t info;
+    StaticJsonDocument<JSON_OBJECT_SIZE(1 + 7 + 7)> doc;
+
+    doc["uptime_ms"] = millis();
+
+    heap_caps_get_info(&info, MALLOC_CAP_8BIT);
+    doc["heap_8bit_total_free_bytes"] = info.total_free_bytes;
+    doc["heap_8bit_total_allocated_bytes"] = info.total_allocated_bytes;
+    doc["heap_8bit_largest_free_block"] = info.largest_free_block;
+    doc["heap_8bit_minimum_free_bytes"] = info.minimum_free_bytes;
+    doc["heap_8bit_allocated_blocks"] = info.allocated_blocks;
+    doc["heap_8bit_free_blocks"] = info.free_blocks;
+    doc["heap_8bit_total_blocks"] = info.total_blocks;
+
+    heap_caps_get_info(&info, MALLOC_CAP_SPIRAM);
+    doc["heap_spi_total_free_bytes"] = info.total_free_bytes;
+    doc["heap_spi_total_allocated_bytes"] = info.total_allocated_bytes;
+    doc["heap_spi_largest_free_block"] = info.largest_free_block;
+    doc["heap_spi_minimum_free_bytes"] = info.minimum_free_bytes;
+    doc["heap_spi_allocated_blocks"] = info.allocated_blocks;
+    doc["heap_spi_free_blocks"] = info.free_blocks;
+    doc["heap_spi_total_blocks"] = info.total_blocks;
+
+    char json[1024];
+    size_t json_length = serializeJson(doc, json);
+
+    if (!mqtt_client.beginPublish(settings.mqtt.status_topic_name, json_length, false))
+        return;
+    mqtt_client.write((uint8_t *)json, json_length);
+    mqtt_client.endPublish();
+}
+
 void loop()
 {
     esp_task_wdt_reset();
@@ -235,4 +274,5 @@ void loop()
     panel_timeout_loop();
     touch_loop();
     redraw();
+    status_loop();
 }

@@ -42,6 +42,8 @@ public:
         const char *const password;
         const char *const client_name;
         const char *const topic;
+        const unsigned int status_interval;
+        const char *const status_topic_name;
         const unsigned int reconnect;
         Mqtt();
     };
