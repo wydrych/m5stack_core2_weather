@@ -374,8 +374,15 @@ ForecastPanel::yrange_t ForecastPanel::getYrange(std::vector<std::unique_ptr<Ser
 
 void ForecastPanel::plotNights(ForecastPanel::xrange_t xrange, int32_t x0, float xscale)
 {
-    struct tm timeinfo;
-    gmtime_r(&xrange.from, &timeinfo);
+    struct tm timeinfo, gmtimeinfo;
+    gmtime_r(&xrange.from, &gmtimeinfo);
+    localtime_r(&xrange.from, &timeinfo);
+    timeinfo.tm_year = gmtimeinfo.tm_year;
+    timeinfo.tm_mon =  gmtimeinfo.tm_mon;
+    timeinfo.tm_mday =  gmtimeinfo.tm_mday;
+    timeinfo.tm_hour =  gmtimeinfo.tm_hour;
+    timeinfo.tm_min =  gmtimeinfo.tm_min;
+    timeinfo.tm_sec =  gmtimeinfo.tm_sec;
     float tzoffset = (xrange.from - mktime(&timeinfo)) / 3600.0;
 
     SunSet sun;
@@ -390,13 +397,13 @@ void ForecastPanel::plotNights(ForecastPanel::xrange_t xrange, int32_t x0, float
         localtime_r(&t, &timeinfo);
         sun.setCurrentDate(timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday);
         time_t sunset = t + lround(sun.calcSunset() * 60);
-        M5_LOGD("%d-%d-%d sunset: %d", timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday, sunset);
+        M5_LOGD("%04d-%02d-%02d sunset: %d", timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday, sunset);
 
         t += 24 * 3600;
         localtime_r(&t, &timeinfo);
         sun.setCurrentDate(timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday);
         time_t sunrise = t + lround(sun.calcSunrise() * 60);
-        M5_LOGD("%d-%d-%d sunrise: %d", timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday, sunrise);
+        M5_LOGD("%04d-%02d-%02d sunrise: %d", timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday, sunrise);
 
         int32_t sunset_x = lround(x0 + xscale * (sunset - xrange.from));
         int32_t sunrise_x = lround(x0 + xscale * (sunrise - xrange.from));
