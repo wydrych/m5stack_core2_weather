@@ -228,15 +228,15 @@ void panel_timeout_loop()
 
 void status_loop()
 {
-    static unsigned long next = 0;
-    if (millis() < next)
+    static int64_t next = 0;
+    if (esp_timer_get_time() < next)
         return;
-    next += settings.mqtt.status_interval * 1000;
+    next += settings.mqtt.status_interval * 1000000;
 
     multi_heap_info_t info;
     StaticJsonDocument<JSON_OBJECT_SIZE(1 + 7 + 7)> doc;
 
-    doc["uptime_ms"] = millis();
+    doc["uptime"] = esp_timer_get_time() / 1000000;
 
     heap_caps_get_info(&info, MALLOC_CAP_8BIT);
     doc["heap_8bit_total_free_bytes"] = info.total_free_bytes;
