@@ -142,7 +142,7 @@ void mqtt_callback(char *topic, byte *payload, unsigned int length)
     float reading_temperature;
     float reading_humidity;
     float reading_pressure;
-    StaticJsonDocument<JSON_OBJECT_SIZE(32)> doc;
+    JsonDocument doc;
 
     DeserializationError error = deserializeJson(doc, payload, length);
     if (error)
@@ -234,7 +234,7 @@ void status_loop()
     next += settings.mqtt.status_interval * 1000000;
 
     multi_heap_info_t info;
-    StaticJsonDocument<JSON_OBJECT_SIZE(1 + 7 + 7)> doc;
+    JsonDocument doc;
 
     doc["uptime"] = esp_timer_get_time() / 1000000;
 

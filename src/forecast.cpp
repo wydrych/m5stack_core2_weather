@@ -89,7 +89,7 @@ bool https_json_request(JsonDocument &doc, const char *root_ca, const char *meth
 
 time_t forecast_latest_available()
 {
-    DynamicJsonDocument doc(1024);
+    JsonDocument doc;
     String available_url = String(settings.forecast.base_url) + settings.forecast.available;
     if (!https_json_request(doc, settings.forecast.root_ca, "GET", available_url.c_str(), nullptr, 0))
         return 0;
@@ -112,7 +112,7 @@ time_t forecast_latest_available()
 
 String forecast_fetch_prepare_payload(time_t timestamp)
 {
-    DynamicJsonDocument doc(256);
+    JsonDocument doc;
     doc["date"] = timestamp;
     JsonObject point = doc.createNestedObject("point");
     point["lat"] = std::to_string(settings.forecast.lat);
@@ -125,7 +125,7 @@ bool forecast_fetch(time_t timestamp, forecast_t &target)
     String payload = forecast_fetch_prepare_payload(timestamp);
     M5_LOGD("request payload: %s", payload.c_str());
 
-    DynamicJsonDocument doc(64 * 1024);
+    JsonDocument doc;
     String model_url = String(settings.forecast.base_url) + settings.forecast.model;
 
     if (!https_json_request(doc, settings.forecast.root_ca, "GET", model_url.c_str(), (uint8_t *)payload.c_str(), payload.length()))
