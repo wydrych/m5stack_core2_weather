@@ -114,7 +114,7 @@ String forecast_fetch_prepare_payload(time_t timestamp)
 {
     JsonDocument doc;
     doc["date"] = timestamp;
-    JsonObject point = doc.createNestedObject("point");
+    JsonObject point = doc["point"].to<JsonObject>();
     point["lat"] = std::to_string(settings.forecast.lat);
     point["lon"] = std::to_string(settings.forecast.lon);
     return doc.as<String>();
